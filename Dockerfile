@@ -10,7 +10,7 @@ COPY . .
 ARG NEXT_PUBLIC_CONVEX_URL
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npm run build
+RUN npx next build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
