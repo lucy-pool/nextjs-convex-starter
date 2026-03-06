@@ -135,81 +135,28 @@ Design modules to be **"Accessible but Irrelevant"** — implementation details 
 - **Change Gravity:** If changing one internal decision requires updating 3+ files, the seam is too thin — move logic deeper.
 - **Temporal Coupling:** If files always change together in commits (`git log --name-only`), they belong in the same module boundary.
 
-## Stop Hook (`.claude/hooks/stop-hook.ts`)
+### Greybox at Planning Time
 
-Runs automatically after every Claude Code turn that edits files. Blocks until issues are fixed.
+**When brainstorming or writing implementation plans**, evaluate every proposed module against the Greybox checklist **before finalizing the design**. This is mandatory — do not skip it even for "simple" features.
 
-| Check | What it does |
-|-------|-------------|
-| 0. Tests | `bun run test` (only when convex/ files changed) |
-| 1. TypeScript typecheck | `bun run typecheck` |
-| 2. Convex typecheck | Schema vs function signature validation |
-| 3. Unused `_generated` imports | Lint: dead imports in `convex/` |
-| 4. Client-only packages | Lint: React/Next.js imports in `convex/` server code |
-| 5. Next.js MCP errors | Queries `localhost:3000/_next/mcp` for build/runtime errors (skipped if dev server not running) |
+During the **brainstorming** skill's "Present design" step, for each new module or service:
 
-**Pre-commit warnings** (non-blocking, run on `git commit`):
-- `check-untested-functions.sh` — warns about exported Convex functions with no test references
-- `check-temporal-coupling.sh` — warns about files in different modules that always change together (Greybox Principle)
+1. **Define the seam first.** What is the public API? Can you describe it in one sentence?
+2. **Run the three questions.** Deep? Opaque? Outcome-focused? If any answer is "no", redesign before proceeding.
+3. **Check existing boundaries.** Read `memory/ai/diagrams/greybox.md` to understand current module structure. Does the new feature fit inside an existing deep module, or does it need its own?
+4. **Identify the swap test.** Name one internal implementation detail that could change without affecting consumers. If you can't, the module isn't deep enough.
 
-After all checks pass, spawns a background agent to update architecture diagrams.
+During the **writing-plans** skill, for each task that creates new files:
 
-## MCP Servers (`.mcp.json`)
+1. **Annotate public vs internal.** Mark which files are public interface and which are internals.
+2. **Plan tests at the seam.** Tests should call the public API, not internal helpers.
+3. **Flag cross-module dependencies.** If a task requires importing from another module's internals, the boundary is wrong — redesign the seam.
 
-Configured in `.mcp.json` at the project root. Restart Claude Code after changes.
+This catches architectural issues at the cheapest possible moment — before any code is written.
 
-### next-devtools-mcp
+## Browser & UI Verification
 
-Connects to the running Next.js dev server via the `/_next/mcp` endpoint. Provides real-time access to app state. **Requires `bun dev` to be running.**
-
-| Tool | Use |
-|------|-----|
-| `get_errors` | Build, runtime, and console errors from open browser sessions |
-| `get_logs` | Path to dev server log file with browser console and server output |
-| `get_page_metadata` | Runtime metadata for specific pages (routes, components, rendering) |
-| `get_project_metadata` | Project structure, configuration, and dev server URL |
-| `get_server_action_by_id` | Look up Server Actions by ID to find source file and function |
-
-**Usage**: The MCP tools are available directly when the server is configured. Use them to check for errors, inspect routes, and debug issues in real time.
-
-### shadcn
-
-Provides tools for adding and managing shadcn/ui components.
-
-| Tool | Use |
-|------|-----|
-| Add components | `bunx --bun shadcn@latest add [component]` |
-
-## Skills
-
-### agent-browser
-
-Browser automation skill for testing, validation, and visual verification. Invoke with `agent-browser` commands via Bash.
-
-| Command | Use |
-|---------|-----|
-| `agent-browser open <url>` | Navigate to a page |
-| `agent-browser snapshot -i` | Get interactive element refs (`@e1`, `@e2`, ...) |
-| `agent-browser click @e1` | Click an element by ref |
-| `agent-browser fill @e1 "text"` | Clear and type into an input |
-| `agent-browser screenshot` | Take a screenshot (add `--full` for full page, `--annotate` for labeled elements) |
-| `agent-browser wait --load networkidle` | Wait for page to fully load |
-| `agent-browser get text @e1` | Get element text content |
-| `agent-browser close` | Close the browser session |
-
-**Workflow**: `open` → `snapshot -i` → interact using refs → re-snapshot after navigation/DOM changes. Commands can be chained with `&&`. Always close the session when done.
-
-**Usage**: Use to visually verify UI changes, test user flows end-to-end, take screenshots, and fill forms. For runtime/build error detection, use the Next.js MCP server (`get_errors`) instead. Full docs in `.claude/skills/agent-browser/SKILL.md`.
-
-## Diagrams (source of truth for schema, functions, auth, data flow, module boundaries)
-
-Auto-maintained by the Stop hook. **Read these before making changes** — they contain the full details on tables, indexes, auth guards, R2 upload flow, AI chat flow, all Convex function signatures, and deep module boundaries (Greybox).
-
-- `memory/ai/diagrams/schema.md` — ER diagram, indexes, roles, validators
-- `memory/ai/diagrams/functions.md` — All Convex functions, auth guards, table access, flow diagrams
-- `memory/ai/diagrams/auth-flow.md` — Sign-in sequence, route protection, JWT flow
-- `memory/ai/diagrams/data-flow.md` — Reactive queries, R2 upload flow, AI chat flow, key patterns
-- `memory/ai/diagrams/greybox.md` — Deep module boundaries, public APIs vs internals, swap tests
+Always use the `agent-browser` skill for browser interaction and visual verification. Take screenshots and view them directly — do not pipe screenshots through other AI tools (e.g., Zai MCP `analyze_image`). Direct visual feedback is more valuable than secondhand analysis.
 
 ## Security: Auth Guarding Rules
 
@@ -268,10 +215,7 @@ Auth is enforced **automatically** via custom function builders from `convex/fun
 4. Create `src/app/(app)/your-feature/page.tsx` (`"use client"` directive)
 5. Add nav entry in `src/components/layout/sidebar.tsx`
 6. Add tests in `convex/<service>/__tests__/` for new queries/mutations
-7. New module? Passes the Greybox checklist (Deep, Opaque, Outcome-Focused)
-8. Identified the seam? Public interface defined before implementation
-9. Run `bunx convex dev` to push schema
-10. Type-check: `bunx tsc --noEmit`
+7. Follow "Greybox at Planning Time" checklist above for new modules
 
 ## Adding a Role
 
@@ -280,45 +224,3 @@ Auth is enforced **automatically** via custom function builders from `convex/fun
 3. Add a guard in `convex/authHelpers.ts` (e.g. `requireEditor`)
 4. Update `convex/users.ts` `updateUserRoles` args validator
 
-## Environment Variables
-
-| Variable | Location | Required |
-|----------|----------|----------|
-| `CONVEX_DEPLOYMENT` | `.env.local` | Yes (auto-set) |
-| `NEXT_PUBLIC_CONVEX_URL` | `.env.local` | Yes (auto-set) |
-| `AUTH_GITHUB_ID` | Convex env | For GitHub OAuth |
-| `AUTH_GITHUB_SECRET` | Convex env | For GitHub OAuth |
-| `AUTH_GOOGLE_ID` | Convex env | For Google OAuth |
-| `AUTH_GOOGLE_SECRET` | Convex env | For Google OAuth |
-| `R2_ENDPOINT` | Convex env | For file uploads |
-| `R2_ACCESS_KEY_ID` | Convex env | For file uploads |
-| `R2_SECRET_ACCESS_KEY` | Convex env | For file uploads |
-| `R2_BUCKET` | Convex env | For file uploads |
-| `OPENROUTER_API_KEY` | Convex env | For AI chat |
-| `DEFAULT_OPENROUTER_MODEL` | Convex env | Optional (default devstral free) |
-
-## Quick Start
-
-```bash
-bun install
-cp .env.example .env.local    # Fill in Convex URL
-bunx convex dev                # Terminal 1 — pushes schema
-bun dev                        # Terminal 2 — starts Next.js
-```
-
-For OAuth providers, set env vars in the Convex dashboard:
-```bash
-bunx convex env set AUTH_GITHUB_ID your-github-client-id
-bunx convex env set AUTH_GITHUB_SECRET your-github-client-secret
-bunx convex env set AUTH_GOOGLE_ID your-google-client-id
-bunx convex env set AUTH_GOOGLE_SECRET your-google-client-secret
-```
-
-For R2/AI features, set env vars in the Convex dashboard:
-```bash
-bunx convex env set R2_ENDPOINT https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
-bunx convex env set R2_ACCESS_KEY_ID your-access-key-id
-bunx convex env set R2_SECRET_ACCESS_KEY your-secret-access-key
-bunx convex env set R2_BUCKET your-bucket-name
-bunx convex env set OPENROUTER_API_KEY sk-or-v1-...
-```

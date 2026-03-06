@@ -324,6 +324,16 @@ interface DiagramMapping {
   patterns: RegExp[];
 }
 
+// Patterns that indicate the file tree in CLAUDE.md ## Architecture may need updating.
+// These match structural changes (new files, new dirs) vs content-only edits.
+const ARCHITECTURE_TREE_PATTERNS: RegExp[] = [
+  /^convex\/[^_].*\.tsx?$/,
+  /^src\/app\/.*\/page\.tsx$/,
+  /^src\/components\/.*\.tsx$/,
+  /^src\/lib\/.*\.ts$/,
+  /^\.claude\/hooks\//,
+];
+
 // Map source file patterns to the diagrams they affect.
 // When you add new diagrams, add a mapping here so they stay up to date.
 const DIAGRAM_MAPPINGS: DiagramMapping[] = [
@@ -383,6 +393,16 @@ function touchLockFile(): void {
   } catch {
     // Best-effort
   }
+}
+
+function needsArchitectureTreeUpdate(changedFiles: string[], cwd: string): boolean {
+  for (const file of changedFiles) {
+    const rel = file.startsWith(cwd) ? file.slice(cwd.length + 1) : file;
+    for (const pattern of ARCHITECTURE_TREE_PATTERNS) {
+      if (pattern.test(rel)) return true;
+    }
+  }
+  return false;
 }
 
 function getAffectedDiagrams(changedFiles: string[], cwd: string): string[] {
@@ -481,15 +501,20 @@ async function main() {
     return;
   }
 
-  // --- All checks passed — update diagrams if needed ---
+  // --- All checks passed — update diagrams + architecture tree if needed ---
   const affectedDiagrams = getAffectedDiagrams(changedFiles, input.cwd);
+  const updateArchTree = needsArchitectureTreeUpdate(changedFiles, input.cwd);
   const diagramDir = join(input.cwd, DIAGRAM_DIR);
   const diagramsExist = existsSync(diagramDir);
+  const hasWork = (affectedDiagrams.length > 0 && diagramsExist) || updateArchTree;
 
-  if (affectedDiagrams.length > 0 && diagramsExist) {
+  if (hasWork) {
     if (isDiagramUpdateDebounced()) {
+      const parts = [];
+      if (affectedDiagrams.length > 0) parts.push(`diagrams: ${affectedDiagrams.join(", ")}`);
+      if (updateArchTree) parts.push("CLAUDE.md architecture tree");
       console.error(
-        `Diagrams needing update: ${affectedDiagrams.join(", ")}. Skipped — another update ran within ${DEBOUNCE_SECONDS}s.`
+        `Updates needed: ${parts.join("; ")}. Skipped — another update ran within ${DEBOUNCE_SECONDS}s.`
       );
     } else {
       const existingDiagrams = affectedDiagrams.filter((d) =>
@@ -499,8 +524,11 @@ async function main() {
         (d) => !existsSync(join(diagramDir, d))
       );
 
+      const parts = [];
+      if (affectedDiagrams.length > 0) parts.push(`diagrams: ${affectedDiagrams.join(", ")}`);
+      if (updateArchTree) parts.push("CLAUDE.md architecture tree");
       console.error(
-        `Diagrams needing update: ${affectedDiagrams.join(", ")}. Spawning diagram updater...`
+        `Updates needed: ${parts.join("; ")}. Spawning updater...`
       );
 
       touchLockFile();
@@ -515,7 +543,10 @@ async function main() {
           : "",
         `Also consider if the changes introduce something that should be in a NEW diagram not yet listed (e.g., a new integration, a new data pipeline, a new auth provider). If so, create it in ${DIAGRAM_DIR}/.`,
         `Use mermaid syntax inside markdown code blocks. Include tables for quick reference. Prioritize completeness for AI consumption — include every edge case and conditional path.`,
-        `Do NOT commit. Leave the updated diagrams as unstaged changes in the working tree.`,
+        updateArchTree
+          ? `ALSO update the ## Architecture file tree section in CLAUDE.md. Read the current CLAUDE.md, then scan the actual file structure (convex/, src/app/, src/components/, src/lib/, .claude/hooks/) and update the tree to match reality. Keep the same format — indented file tree with inline comments. Only update the tree block, do not change any other section.`
+          : "",
+        `Do NOT commit. Leave all updates as unstaged changes in the working tree.`,
       ]
         .filter(Boolean)
         .join(" ");
