@@ -1,120 +1,32 @@
-# Convex + Clerk Starter Template
+# Convex Auth Starter
 
-A production-ready starter for building full-stack apps with **Convex**, **Next.js 16**, **Clerk**, and **shadcn/ui**. Comes with authentication, user provisioning, role-based access, Cloudflare R2 file uploads, OpenRouter AI integration, demo features for each pattern, and an auto-maintained documentation system that keeps architecture diagrams in sync with your code.
+A production-ready starter for building full-stack apps with **Convex**, **Next.js 16**, **Convex Auth**, and **shadcn/ui**. Ships with authentication, roles, email (Resend/SMTP), Cloudflare R2 file uploads, OpenRouter AI chat, a test suite, and auto-maintained architecture diagrams.
 
-## What You Get
+## What's Included
 
-### Auth — fully wired, zero config
+- **Auth** — Email/password, GitHub OAuth, Google OAuth via Convex Auth. Protected routes just work — anything under `(app)/` requires authentication.
+- **Roles** — Defined once in `convex/schema.ts`. New users get `user`. Admins can promote. Add roles by editing one file.
+- **Email** — Full email service with Resend and SMTP providers, built-in templates (welcome, notification, etc.), custom template editor with visual and HTML modes.
+- **File uploads** — Browser-to-R2 direct upload via presigned URLs. Convex stores metadata only.
+- **AI chat** — OpenRouter integration (OpenAI-compatible). Conversation history, any model.
+- **Backend guards** — Custom function builders (`userQuery`, `userMutation`, `adminQuery`, `adminMutation`) auto-inject `ctx.user` and enforce auth/role checks.
+- **Tests** — Backend test suite using vitest + convex-test. Auth guards, CRUD, data boundaries, email flows.
+- **17 shadcn/ui components** — Button, Card, Dialog, Input, Textarea, Badge, Select, Tabs, Table, Label, Progress, Alert Dialog, Toast, Checkbox, Switch, Dropdown Menu. Add more with `bunx shadcn@latest add [component]`.
 
-Sign-up, sign-in, and session management via Clerk. Users are auto-provisioned in your Convex database on first sign-in. Protected routes just work — anything under `(app)/` requires authentication.
-
-### Roles — one place to change
-
-Roles live in `convex/schema.ts` as a single `ROLES` array and `roleValidator`. New users get the `user` role. Admins can promote others. Add roles (editor, manager, whatever) by editing one file — the type system propagates everywhere.
-
-### Backend guards — composable
-
-`requireAuth(ctx)` for any signed-in user. `requireAdmin(ctx)` for admins. `hasRole(ctx, "someRole")` for boolean checks. Add your own guards following the same pattern.
-
-### Cloudflare R2 file uploads — presigned URL pattern
-
-Files go directly from browser to R2. Convex stores metadata only, never file bytes. The demo shows the full flow using `@convex-dev/r2`: get presigned URL → upload with progress tracking → store metadata.
-
-### OpenRouter AI — chat completions
-
-Call any LLM via OpenRouter's OpenAI-compatible API. The demo shows the action pattern for external API calls, conversation history stored in Convex, and a working chat UI.
-
-### Three demo features — copy the patterns, then delete them
+### Demo features — copy the patterns, then delete them
 
 | Demo | Pattern it teaches |
-|------|--------------------|
-| **Notes** | Convex CRUD, queries with indexes, mutations with auth guards, ownership checks, real-time updates |
-| **Files** | `@convex-dev/r2` component, presigned R2 URLs, direct browser upload, progress tracking, metadata storage |
-| **AI Chat** | External API calls from actions, conversation history, loading states, streaming-ready architecture |
-
-### shadcn/ui — 15 components ready
-
-Button, Card, Dialog, Input, Textarea, Badge, Select, Tabs, Table, Label, Progress, Alert Dialog, Toast, Toaster. Add more with `bunx shadcn@latest add [component]`.
-
-### Auto-maintained architecture diagrams
-
-A Stop hook watches what files you change and spawns a background agent to update mermaid diagrams in `memory/ai/diagrams/`. Four diagrams ship with the template:
-
-| Diagram | What it documents |
-|---------|-------------------|
-| `schema.md` | ER diagram of all tables, indexes, and roles |
-| `functions.md` | Every Convex function — type, auth level, which tables it touches |
-| `auth-flow.md` | Sign-in sequence, route protection, JWT validation |
-| `data-flow.md` | How data moves from browser through Convex and back |
-
-These update automatically. When you add a table, the schema diagram updates. When you add a function, the functions diagram updates. The agent always starts with accurate context.
-
-### Code quality hooks
-
-The Stop hook also runs before you can move on:
-1. **TypeScript typecheck** — catches type errors
-2. **Convex typecheck** — catches schema/function mismatches
-3. **Unused import check** — flags dead imports from `convex/_generated`
-4. **Client import check** — blocks React/Next.js imports in server-side Convex code
-
-## Project Structure
-
-```
-convex/                        # Backend (runs on Convex servers)
-  schema.ts                    # Tables, indexes, role + fileType validators
-  auth.config.ts               # Clerk JWT provider config
-  auth.ts                      # Auth guards (requireAuth, requireAdmin, hasRole)
-  users.ts                     # User CRUD + auto-provisioning
-  convex.config.ts               # App definition — registers R2 component
-  files.ts                     # File metadata CRUD (queries/mutations)
-  r2.ts                        # R2 client + clientApi exports (generateUploadUrl, syncMetadata)
-  r2Actions.ts                 # "use node" — R2 presigned download URLs
-  ai.ts                        # AI message history CRUD (queries/mutations)
-  aiActions.ts                 # "use node" — OpenRouter chat completions
-  notes.ts                     # Demo CRUD — delete when building your app
-  util.ts                      # Error classes (ConvexError, ValidationError, etc.)
-
-src/app/                       # Frontend (Next.js App Router)
-  layout.tsx                   # Root: ClerkProvider → ConvexClientProvider → Toaster
-  page.tsx                     # Landing page (redirects to /dashboard if signed in)
-  sign-in/[[...rest]]/         # Clerk sign-in page
-  sign-up/[[...rest]]/         # Clerk sign-up page
-  (app)/                       # Protected routes (require authentication)
-    layout.tsx                 # Auth gate + auto user provisioning
-    dashboard/page.tsx         # Welcome + demo feature links
-    notes/page.tsx             # Demo: CRUD — delete when building your app
-    files/page.tsx             # Demo: R2 upload — delete when building your app
-    ai-chat/page.tsx           # Demo: OpenRouter chat — delete when building your app
-
-src/components/
-  providers.tsx                # ConvexProviderWithClerk wiring
-  layout/
-    app-shell.tsx              # Sidebar + topbar + content wrapper
-    sidebar.tsx                # Navigation — add your routes here
-    topbar.tsx                 # Clerk UserButton
-  ui/                          # 15 shadcn/ui components
-
-src/lib/
-  utils.ts                     # cn() class merging utility
-
-.claude/hooks/
-  stop-hook.ts                 # Stop hook: typecheck, lint, diagram updates
-  block-*.sh                   # PreToolUse hooks: enforce CLI tool usage rules
-
-memory/ai/diagrams/            # Auto-maintained architecture docs
-  schema.md
-  functions.md
-  auth-flow.md
-  data-flow.md
-```
+|------|-------------------|
+| **Notes** | CRUD, queries with indexes, mutations with auth guards, ownership checks, public/private visibility |
+| **Files** | `@convex-dev/r2` presigned URLs, direct browser upload, progress tracking, metadata storage |
+| **AI Chat** | External API calls from actions, conversation history, loading states |
 
 ## Getting Started
 
 ### Prerequisites
 
-- [Bun](https://bun.sh) installed
-- A [Clerk](https://clerk.com) account
-- A [Convex](https://convex.dev) account
+- [Bun](https://bun.sh/) (or Node.js 18+)
+- A [Convex](https://convex.dev/) account
 
 ### Setup
 
@@ -122,56 +34,153 @@ memory/ai/diagrams/            # Auto-maintained architecture docs
 # 1. Install dependencies
 bun install
 
-# 2. Create your env file
-cp .env.example .env.local
-```
-
-Edit `.env.local` with your Clerk keys:
-
-```env
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-CLERK_JWT_ISSUER_DOMAIN=https://your-domain.clerk.accounts.dev
-```
-
-### Clerk Setup
-
-1. Create a Clerk application at [dashboard.clerk.com](https://dashboard.clerk.com)
-2. Copy the publishable and secret keys to `.env.local`
-3. In Clerk Dashboard → JWT Templates, create a template named **"convex"**
-4. Set the issuer to your Clerk domain (e.g. `https://your-domain.clerk.accounts.dev`)
-5. In the Convex dashboard, add your Clerk issuer domain under Settings → Authentication
-
-### Run
-
-```bash
-# Terminal 1 — starts Convex (pushes schema, watches for changes)
+# 2. Start Convex (pushes schema, creates .env.local with CONVEX_DEPLOYMENT and NEXT_PUBLIC_CONVEX_URL)
 bunx convex dev
 
-# Terminal 2 — starts Next.js
+# 3. Initialize Convex Auth (generates JWT_PRIVATE_KEY and JWKS — required for auth to work)
+npx @convex-dev/auth
+
+# 4. Start Next.js (in a second terminal)
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000), sign up, and you'll land on the dashboard.
+Open [http://localhost:3000](http://localhost:3000), sign up with email/password, and you'll land on the dashboard.
+
+### Optional: GitHub OAuth
+
+1. Create a GitHub OAuth App at [github.com/settings/developers](https://github.com/settings/developers)
+   - Homepage URL: `http://localhost:3000`
+   - Callback URL: your Convex site URL + `/api/auth/callback/github` (find it with `bunx convex env get SITE_URL`)
+2. Set the env vars:
+
+```bash
+bunx convex env set AUTH_GITHUB_ID your-github-client-id
+bunx convex env set AUTH_GITHUB_SECRET your-github-client-secret
+```
+
+### Optional: Google OAuth
+
+1. Create credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+   - Authorized redirect URI: your Convex site URL + `/api/auth/callback/google`
+2. Set the env vars:
+
+```bash
+bunx convex env set AUTH_GOOGLE_ID your-google-client-id
+bunx convex env set AUTH_GOOGLE_SECRET your-google-client-secret
+```
+
+### Optional: Cloudflare R2 (file uploads)
+
+1. Create an R2 bucket in [Cloudflare Dashboard](https://dash.cloudflare.com) → **R2** → **Create Bucket**
+2. Create an R2 API token: **R2** → **Manage R2 API Tokens** → **Create API Token** (Object Read & Write, scoped to your bucket)
+3. Set env vars:
+
+```bash
+bunx convex env set R2_ENDPOINT https://<ACCOUNT_ID>.r2.cloudflarestorage.com
+bunx convex env set R2_ACCESS_KEY_ID <your-access-key-id>
+bunx convex env set R2_SECRET_ACCESS_KEY <your-secret-access-key>
+bunx convex env set R2_BUCKET <your-bucket-name>
+```
+
+4. Configure CORS on the bucket (**R2** → your bucket → **Settings** → **CORS Policy**):
+
+```json
+[
+  {
+    "AllowedOrigins": [
+      "http://localhost:3000",
+      "https://your-domain.com",
+      "https://*.your-domain.com"
+    ],
+    "AllowedMethods": ["GET", "PUT"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+### Optional: OpenRouter (AI chat)
+
+```bash
+bunx convex env set OPENROUTER_API_KEY sk-or-v1-...
+bunx convex env set DEFAULT_OPENROUTER_MODEL google/gemini-3-flash-preview
+```
+
+Browse models at [openrouter.ai/models](https://openrouter.ai/models). Defaults to `mistralai/devstral-2512:free` if not set.
+
+### Optional: Email (Resend or SMTP)
+
+For Resend:
+```bash
+bunx convex env set RESEND_API_KEY re_...
+bunx convex env set EMAIL_FROM "Your App <noreply@yourdomain.com>"
+```
+
+For SMTP:
+```bash
+bunx convex env set SMTP_HOST smtp.example.com
+bunx convex env set SMTP_PORT 587
+bunx convex env set SMTP_USER your-username
+bunx convex env set SMTP_PASS your-password
+bunx convex env set EMAIL_FROM "Your App <noreply@yourdomain.com>"
+```
+
+## Project Structure
+
+```
+convex/                          # Backend
+  schema.ts                      # Tables, indexes, role + fileType validators
+  auth.ts                        # Convex Auth providers (Password, GitHub, Google)
+  auth.config.ts                 # Self-issued JWT config
+  authHelpers.ts                 # Auth guards (requireAuth, requireAdmin, hasRole)
+  functions.ts                   # Custom builders (userQuery, userMutation, adminQuery, adminMutation)
+  users.ts                       # User CRUD
+  notes.ts                       # Demo CRUD (delete me)
+
+  email/                         # Email service
+    send.ts                      # sendEmail, resendEmail
+    logs.ts                      # Email log management
+    templates.ts                 # Custom template CRUD
+    actions.ts                   # "use node" — email delivery
+    builtinTemplates.tsx         # React Email templates (welcome, notification, etc.)
+
+  storage/                       # File storage
+    files.ts                     # File metadata CRUD
+    r2.ts                        # R2 client + presigned upload URLs
+    downloads.ts                 # "use node" — presigned download URLs
+
+  ai/                            # AI chat
+    messages.ts                  # Message history CRUD
+    chat.ts                      # "use node" — OpenRouter completions
+
+src/app/                         # Frontend (Next.js App Router)
+  layout.tsx                     # Root: ConvexAuthNextjsServerProvider
+  page.tsx                       # Landing page
+  signin/page.tsx                # Sign-in (Password + OAuth)
+  signup/page.tsx                # Sign-up (Password + OAuth)
+  (app)/                         # Protected routes
+    layout.tsx                   # Auth gate (redirects to /signin)
+    dashboard/page.tsx           # Welcome + demo links
+    notes/page.tsx               # Demo: CRUD
+    files/page.tsx               # Demo: R2 upload
+    ai-chat/page.tsx             # Demo: OpenRouter chat
+
+src/components/
+  providers.tsx                  # ConvexAuthProvider wiring
+  layout/
+    app-shell.tsx                # Sidebar + topbar + content
+    sidebar.tsx                  # Nav items — add your routes here
+    topbar.tsx                   # User menu + theme toggle
+  ui/                            # 17 shadcn/ui components
+
+tests/convex/                    # Backend tests (vitest + convex-test)
+```
 
 ## Building Your App
 
-### 1. Define your roles
+### 1. Add a table
 
-Edit `convex/schema.ts`:
-
-```typescript
-export const ROLES = ["user", "editor", "admin"] as const;
-export const roleValidator = v.union(
-  v.literal("user"),
-  v.literal("editor"),
-  v.literal("admin")
-);
-```
-
-### 2. Add a table
-
-In `convex/schema.ts`, add to the `defineSchema` call:
+In `convex/schema.ts`:
 
 ```typescript
 projects: defineTable({
@@ -180,37 +189,33 @@ projects: defineTable({
   status: v.union(v.literal("active"), v.literal("archived")),
   createdAt: v.number(),
 })
-  .index("by_owner", ["ownerId"])
-  .index("by_status", ["status"]),
+  .index("by_owner", ["ownerId"]),
 ```
 
-### 3. Write backend functions
+### 2. Write backend functions
 
 Create `convex/projects.ts`:
 
 ```typescript
-import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { requireAuth } from "./auth";
+import { userQuery, userMutation } from "./functions";
 
-export const list = query({
+export const list = userQuery({
   args: {},
   handler: async (ctx) => {
-    const user = await requireAuth(ctx);
     return ctx.db
       .query("projects")
-      .withIndex("by_owner", (q) => q.eq("ownerId", user._id))
+      .withIndex("by_owner", (q) => q.eq("ownerId", ctx.user._id))
       .collect();
   },
 });
 
-export const create = mutation({
+export const create = userMutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
-    const user = await requireAuth(ctx);
     return ctx.db.insert("projects", {
       name: args.name,
-      ownerId: user._id,
+      ownerId: ctx.user._id,
       status: "active",
       createdAt: Date.now(),
     });
@@ -218,7 +223,7 @@ export const create = mutation({
 });
 ```
 
-### 4. Create a page
+### 3. Create a page
 
 Create `src/app/(app)/projects/page.tsx`:
 
@@ -235,24 +240,16 @@ export default function ProjectsPage() {
 }
 ```
 
-### 5. Add it to the sidebar
+### 4. Add it to the sidebar
 
-In `src/components/layout/sidebar.tsx`, add to `navItems`:
+In `src/components/layout/sidebar.tsx`, add to the nav items array.
 
-```typescript
-{
-  label: "Projects",
-  href: "/projects",
-  icon: <FolderOpen className="h-5 w-5" />,
-},
-```
+### 5. Delete the demos
 
-### 6. Delete the demos
-
-Remove the demo files you don't need:
-- Notes: `convex/notes.ts`, `src/app/(app)/notes/`, `notes` table from schema
-- Files: keep `convex/files.ts` + `convex/r2.ts` + `convex/r2Actions.ts` if you need uploads, delete the demo page `src/app/(app)/files/`
-- AI: keep `convex/ai.ts` + `convex/aiActions.ts` if you need AI, delete the demo page `src/app/(app)/ai-chat/`
+Remove what you don't need:
+- **Notes:** `convex/notes.ts`, `src/app/(app)/notes/`, `notes` table from schema
+- **Files demo page:** `src/app/(app)/files/` (keep `convex/storage/` if you need uploads)
+- **AI demo page:** `src/app/(app)/ai-chat/` (keep `convex/ai/` if you need AI)
 
 ## Convex Cheat Sheet
 
@@ -261,36 +258,48 @@ Remove the demo files you don't need:
 | **Queries** | Reactive, re-run on data change. No side effects. |
 | **Mutations** | Transactional. No `fetch()` or external API calls. |
 | **Actions** | For side effects (APIs, email, etc). Use `ctx.runQuery()`/`ctx.runMutation()` for DB. |
-| **`"use node"` files** | Only export actions. Required for Node.js packages (e.g. email SDKs). |
-| **New fields** | Use `v.optional()` when adding fields to tables that already have data. |
-| **Scheduling** | Use `ctx.scheduler.runAfter(0, ...)` from mutations for async background work. |
-| **Action → Action** | Anti-pattern. Inline the logic or schedule from a mutation. |
+| **`"use node"` files** | Only export actions. Required for Node.js packages. |
+| **New fields** | Use `v.optional()` when adding to tables that already have data. |
+| **Scheduling** | Use `ctx.scheduler.runAfter(0, ...)` from mutations for async work. |
+| **Auth in functions** | Use `userQuery`/`userMutation` from `./functions` — auth is automatic via `ctx.user`. |
 
 ## Environment Variables
 
-| Variable | Location | Description |
-|----------|----------|-------------|
+| Variable | Where to set | Description |
+|----------|-------------|-------------|
 | `CONVEX_DEPLOYMENT` | `.env.local` | Auto-set by `bunx convex dev` |
 | `NEXT_PUBLIC_CONVEX_URL` | `.env.local` | Auto-set by `bunx convex dev` |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `.env.local` | From Clerk dashboard |
-| `CLERK_SECRET_KEY` | `.env.local` | From Clerk dashboard |
-| `CLERK_JWT_ISSUER_DOMAIN` | Convex dashboard env | Your Clerk issuer domain |
-| `R2_ENDPOINT` | Convex dashboard env | Cloudflare R2 S3-compatible endpoint URL |
-| `R2_ACCESS_KEY_ID` | Convex dashboard env | R2 API token access key ID |
-| `R2_SECRET_ACCESS_KEY` | Convex dashboard env | R2 API token secret access key |
-| `R2_BUCKET` | Convex dashboard env | R2 bucket name |
-| `OPENROUTER_API_KEY` | Convex dashboard env | OpenRouter API key |
-| `DEFAULT_OPENROUTER_MODEL` | Convex dashboard env | Default model (default: devstral free) |
+| `JWT_PRIVATE_KEY` | Convex dashboard | Auto-set by `npx @convex-dev/auth` |
+| `JWKS` | Convex dashboard | Auto-set by `npx @convex-dev/auth` |
+| `SITE_URL` | Convex dashboard | Auto-set by `npx @convex-dev/auth` |
+| `AUTH_GITHUB_ID` | Convex dashboard | GitHub OAuth client ID |
+| `AUTH_GITHUB_SECRET` | Convex dashboard | GitHub OAuth client secret |
+| `AUTH_GOOGLE_ID` | Convex dashboard | Google OAuth client ID |
+| `AUTH_GOOGLE_SECRET` | Convex dashboard | Google OAuth client secret |
+| `R2_ENDPOINT` | Convex dashboard | Cloudflare R2 S3-compatible endpoint |
+| `R2_ACCESS_KEY_ID` | Convex dashboard | R2 API token access key |
+| `R2_SECRET_ACCESS_KEY` | Convex dashboard | R2 API token secret |
+| `R2_BUCKET` | Convex dashboard | R2 bucket name |
+| `OPENROUTER_API_KEY` | Convex dashboard | OpenRouter API key |
+| `DEFAULT_OPENROUTER_MODEL` | Convex dashboard | Default model (default: devstral free) |
+| `RESEND_API_KEY` | Convex dashboard | Resend API key (if using Resend) |
+| `EMAIL_FROM` | Convex dashboard | Sender address for emails |
+| `SMTP_HOST` | Convex dashboard | SMTP server host (if using SMTP) |
+| `SMTP_PORT` | Convex dashboard | SMTP port |
+| `SMTP_USER` | Convex dashboard | SMTP username |
+| `SMTP_PASS` | Convex dashboard | SMTP password |
 
-Backend-only secrets go in the Convex dashboard:
+## Troubleshooting
 
-```bash
-bunx convex env set R2_ENDPOINT https://YOUR_ACCOUNT_ID.r2.cloudflarestorage.com
-bunx convex env set R2_ACCESS_KEY_ID your-access-key-id
-bunx convex env set R2_SECRET_ACCESS_KEY your-secret-access-key
-bunx convex env set R2_BUCKET your-bucket-name
-bunx convex env set OPENROUTER_API_KEY sk-or-v1-...
-```
+| Problem | Fix |
+|---------|-----|
+| `Missing environment variable JWT_PRIVATE_KEY` | Run `npx @convex-dev/auth` |
+| `Missing environment variable JWKS` | Run `npx @convex-dev/auth` — it sets both keys |
+| Auth not working after sign-up | Check `JWT_PRIVATE_KEY` and `JWKS` are set: `bunx convex env list` |
+| OAuth redirect errors | Verify callback URLs match your Convex site URL |
+| File uploads failing | Check all 4 R2 env vars and CORS on the bucket |
+| AI chat error | Verify `OPENROUTER_API_KEY` is set |
+| `bunx convex dev` won't start | Run `bun install` first, ensure you're logged in |
 
 ## License
 
