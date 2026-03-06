@@ -20,7 +20,7 @@ const ResetPasswordEmail = Email({
   async sendVerificationRequest({ identifier: email, token, expires }) {
     const apiKey = process.env.RESEND_API_KEY;
     const from = process.env.EMAIL_FROM ?? "noreply@example.com";
-    const appName = process.env.APP_NAME ?? "Lucy";
+    const appName = process.env.APP_NAME ?? "Sherif Starter";
 
     if (!apiKey) {
       console.error("RESEND_API_KEY not set — cannot send password reset email");

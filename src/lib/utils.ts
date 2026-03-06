@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Change this to your app name
-export const APP_NAME = "My App";
+export const APP_NAME = "Sherif Starter";
 
 export function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";

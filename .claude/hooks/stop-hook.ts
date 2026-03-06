@@ -299,6 +299,20 @@ async function checkNextJsMcpErrors(cwd: string): Promise<string | null> {
     if (text.includes("No errors detected")) return null;
     if (!text.includes("Found errors")) return null;
 
+    // Filter out generic network errors (e.g. Convex WebSocket drops) with no stack trace
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    const isOnlyFetchError = lines.every(
+      (l) =>
+        !l.includes("(") ||
+        l.startsWith("#") ||
+        l.startsWith("**") ||
+        l.startsWith("---") ||
+        l.startsWith("```") ||
+        l.includes("Failed to fetch") ||
+        l.includes("TypeError")
+    );
+    if (isOnlyFetchError && text.includes("Failed to fetch")) return null;
+
     // Filter out errors referencing source files that don't exist in this project
     // (e.g. stale browser tabs from other projects on the same port)
     const fileRefs = Array.from(text.matchAll(/\(((?:[^)]|\([^)]*\))+\.(tsx?|jsx?)):\d+:\d+\)/g));

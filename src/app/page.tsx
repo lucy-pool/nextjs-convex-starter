@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { APP_NAME } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Zap, Shield, Cloud, TrendingUp, ArrowRight } from "lucide-react";
+import { Zap, Shield, Cloud, TrendingUp, ArrowRight, Mail } from "lucide-react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -41,6 +41,10 @@ export default function Home() {
           0%, 100% { transform: translateY(0) rotate(-1deg); }
           50% { transform: translateY(-14px) rotate(0.5deg); }
         }
+        @keyframes landing-float4 {
+          0%, 100% { transform: translateY(0) rotate(1.5deg); }
+          50% { transform: translateY(-11px) rotate(-1deg); }
+        }
       `}</style>
 
       <div className="min-h-screen">
@@ -65,7 +69,7 @@ export default function Home() {
           <div className="relative z-10">
             {/* Nav */}
             <nav className="flex items-center justify-between px-6 sm:px-10 py-5">
-              <span className="text-lg font-semibold tracking-tight text-[#29292C] dark:text-white">
+              <span className="text-lg font-semibold tracking-tight text-foreground">
                 {APP_NAME}
               </span>
               <div className="flex items-center gap-2">
@@ -74,13 +78,13 @@ export default function Home() {
                   <Button
                     asChild
                     variant="ghost"
-                    className="rounded-full border border-[#29292C]/15 dark:border-white/20 bg-transparent hover:bg-[#29292C]/5 dark:hover:bg-white/10 text-[#29292C] dark:text-white px-5"
+                    className="rounded-full border border-foreground/15 bg-transparent hover:bg-foreground/5 text-foreground px-5"
                   >
                     <Link href="/signin">Sign in</Link>
                   </Button>
                   <Button
                     asChild
-                    className="rounded-full bg-[#29292C] dark:bg-white text-white dark:text-[#29292C] hover:bg-[#3a3a3e] dark:hover:bg-white/90 px-5"
+                    className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 px-5"
                   >
                     <Link href="/signup">Sign up</Link>
                   </Button>
@@ -88,7 +92,7 @@ export default function Home() {
                 <Authenticated>
                   <Button
                     asChild
-                    className="rounded-full bg-[#29292C] dark:bg-white text-white dark:text-[#29292C] hover:bg-[#3a3a3e] dark:hover:bg-white/90 px-5"
+                    className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 px-5"
                   >
                     <Link href="/dashboard">Dashboard</Link>
                   </Button>
@@ -100,25 +104,23 @@ export default function Home() {
             <div className="text-center pt-12 sm:pt-20 pb-44 sm:pb-56 px-6">
               {/* Badge */}
               <div className="inline-flex items-center gap-2 rounded-full bg-white/60 dark:bg-white/10 backdrop-blur-sm border border-white/40 dark:border-white/10 px-1 py-1 pr-4 mb-8">
-                <span className="rounded-full bg-[#F77B07] px-3 py-0.5 text-xs font-medium text-white">
+                <span className="rounded-full bg-primary px-3 py-0.5 text-xs font-medium text-primary-foreground">
                   {APP_NAME}
                 </span>
-                <span className="text-sm text-[#29292C]/70 dark:text-white/70">
-                  Ship your next project faster
+                <span className="text-sm text-foreground/70">
+                  From zero to production in minutes
                 </span>
               </div>
 
               <h1
-                className={`${heading.className} text-[2.5rem] sm:text-6xl md:text-7xl font-bold leading-[1.1] text-[#29292C] dark:text-white max-w-4xl mx-auto tracking-tight`}
+                className={`${heading.className} text-[2.5rem] sm:text-6xl md:text-7xl font-bold leading-[1.1] text-foreground max-w-4xl mx-auto tracking-tight`}
               >
-                Build and Ship Your
-                <br />
-                Next App with {APP_NAME}
+                Start Building.
               </h1>
 
-              <p className={`${heading.className} mt-5 text-base sm:text-lg text-[#29292C]/60 dark:text-white/50 max-w-xl mx-auto`}>
-                A production-ready starter with real-time data, authentication,
-                file storage, and AI — everything you need to launch.
+              <p className={`${heading.className} mt-5 text-base sm:text-lg text-muted-foreground max-w-xl mx-auto`}>
+                Auth, real-time database, file storage, and AI baked in.
+                One stack, zero config — just ship.
               </p>
 
               {/* CTA row */}
@@ -127,7 +129,7 @@ export default function Home() {
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full bg-[#29292C] dark:bg-white text-white dark:text-[#29292C] hover:bg-[#3a3a3e] dark:hover:bg-white/90 px-8 h-12 text-base"
+                    className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 px-8 h-12 text-base"
                   >
                     <Link href="/signup">
                       Get Started <ArrowRight className="ml-2 h-4 w-4" />
@@ -138,7 +140,7 @@ export default function Home() {
                   <Button
                     asChild
                     size="lg"
-                    className="rounded-full bg-[#29292C] dark:bg-white text-white dark:text-[#29292C] hover:bg-[#3a3a3e] dark:hover:bg-white/90 px-8 h-12 text-base"
+                    className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 px-8 h-12 text-base"
                   >
                     <Link href="/dashboard">
                       Go to Dashboard <ArrowRight className="ml-2 h-4 w-4" />
@@ -147,8 +149,8 @@ export default function Home() {
                 </Authenticated>
 
                 <div className="flex items-center gap-2 rounded-full bg-white/60 dark:bg-white/10 backdrop-blur-sm border border-white/30 dark:border-white/10 px-4 py-2">
-                  <span className="text-lg font-bold text-[#F77B07]">4</span>
-                  <span className="text-xs text-[#29292C]/60 dark:text-white/50 text-left leading-tight">
+                  <span className="text-lg font-bold text-primary">5</span>
+                  <span className="text-xs text-muted-foreground text-left leading-tight">
                     built-in
                     <br />
                     integrations
@@ -162,36 +164,36 @@ export default function Home() {
           <div className="hidden lg:block">
             {/* Card 1: Real-time — left */}
             <div
-              className="absolute top-[58%] left-[4%] z-[8] w-52 rounded-2xl bg-[#f0ebe0] dark:bg-[#2a2824] border border-[#e0d9c8]/50 dark:border-white/10 p-4 shadow-lg"
+              className="absolute top-[58%] left-[4%] z-[8] w-52 rounded-2xl bg-card border border-border/50 p-4 shadow-lg"
               style={{ animation: "landing-float1 6s ease-in-out infinite" }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-3.5 w-3.5 text-[#29292C]/50 dark:text-white/50" />
-                <span className="text-xs font-medium text-[#29292C]/60 dark:text-white/60">
+                <Zap className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
                   Real-time Queries
                 </span>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold text-[#29292C] dark:text-white">
+                <span className="text-2xl font-bold text-foreground">
                   2.4k
                 </span>
                 <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-0.5">
                   <TrendingUp className="h-3 w-3" /> +12.5%
                 </span>
               </div>
-              <p className="text-[10px] text-[#29292C]/40 dark:text-white/40 mt-1">
+              <p className="text-[10px] text-muted-foreground/60 mt-1">
                 Live subscriptions active
               </p>
             </div>
 
             {/* Card 2: Auth — right */}
             <div
-              className="absolute top-[55%] right-[4%] z-[8] w-56 rounded-2xl bg-[#f0ebe0] dark:bg-[#2a2824] border border-[#e0d9c8]/50 dark:border-white/10 p-4 shadow-lg"
+              className="absolute top-[55%] right-[4%] z-[8] w-56 rounded-2xl bg-card border border-border/50 p-4 shadow-lg"
               style={{ animation: "landing-float2 7s ease-in-out infinite" }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <Shield className="h-3.5 w-3.5 text-[#29292C]/50 dark:text-white/50" />
-                <span className="text-xs font-medium text-[#29292C]/60 dark:text-white/60">
+                <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
                   Auth Providers
                 </span>
               </div>
@@ -208,7 +210,7 @@ export default function Home() {
                       r="24"
                       fill="none"
                       stroke="currentColor"
-                      className="text-[#e0d9c8] dark:text-white/10"
+                      className="text-border"
                       strokeWidth="4"
                     />
                     <circle
@@ -216,13 +218,13 @@ export default function Home() {
                       cy="28"
                       r="24"
                       fill="none"
-                      stroke="#F77B07"
+                      className="stroke-primary"
                       strokeWidth="4"
                       strokeDasharray={`${0.99 * 2 * Math.PI * 24} ${2 * Math.PI * 24}`}
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-[#29292C] dark:text-white">
+                  <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">
                     3
                   </span>
                 </div>
@@ -230,10 +232,10 @@ export default function Home() {
                   {["Password", "GitHub", "Google"].map((p, i) => (
                     <div key={p} className="flex items-center gap-1.5">
                       <span
-                        className="h-1.5 w-1.5 rounded-full bg-[#F77B07]"
+                        className="h-1.5 w-1.5 rounded-full bg-primary"
                         style={{ opacity: 1 - i * 0.25 }}
                       />
-                      <span className="text-[#29292C]/60 dark:text-white/60">
+                      <span className="text-muted-foreground">
                         {p}
                       </span>
                     </div>
@@ -244,12 +246,12 @@ export default function Home() {
 
             {/* Card 3: Storage — bottom center */}
             <div
-              className="absolute bottom-[10%] left-1/2 -translate-x-1/2 z-[8] w-56 rounded-2xl bg-[#f0ebe0] dark:bg-[#2a2824] border border-[#e0d9c8]/50 dark:border-white/10 p-4 shadow-lg"
+              className="absolute bottom-[10%] left-[55%] -translate-x-1/2 z-[8] w-56 rounded-2xl bg-card border border-border/50 p-4 shadow-lg"
               style={{ animation: "landing-float3 8s ease-in-out infinite" }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <Cloud className="h-3.5 w-3.5 text-[#29292C]/50 dark:text-white/50" />
-                <span className="text-xs font-medium text-[#29292C]/60 dark:text-white/60">
+                <Cloud className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
                   File Storage
                 </span>
                 <span className="ml-auto text-[10px] text-green-600 dark:text-green-400">
@@ -262,14 +264,47 @@ export default function Home() {
                   (h, i) => (
                     <div
                       key={i}
-                      className="flex-1 rounded-sm bg-[#29292C]/15 dark:bg-white/15"
+                      className="flex-1 rounded-sm bg-foreground/15"
                       style={{ height: `${h}%` }}
                     />
                   ),
                 )}
               </div>
-              <p className="text-[10px] text-[#29292C]/40 dark:text-white/40 mt-2">
+              <p className="text-[10px] text-muted-foreground/60 mt-2">
                 Direct R2 uploads via presigned URLs
+              </p>
+            </div>
+
+            {/* Card 4: Email — bottom left */}
+            <div
+              className="absolute bottom-[8%] left-[22%] z-[8] w-52 rounded-2xl bg-card border border-border/50 p-4 shadow-lg"
+              style={{ animation: "landing-float4 7.5s ease-in-out infinite" }}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground">
+                  Email Delivery
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {["Welcome", "Reset Password", "Custom"].map((t, i) => (
+                  <div key={t} className="flex items-center gap-2">
+                    <div
+                      className="h-1 flex-1 rounded-full bg-foreground/10 overflow-hidden"
+                    >
+                      <div
+                        className="h-full rounded-full bg-primary"
+                        style={{ width: `${[92, 78, 65][i]}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground w-16 text-right">
+                      {t}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-muted-foreground/60 mt-2">
+                Resend &amp; SMTP with custom templates
               </p>
             </div>
           </div>
