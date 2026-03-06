@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { api } from "../../_generated/api";
-import { createTest, createTestUser } from "../../__tests__/helpers";
+import { api } from "../../../convex/_generated/api";
+import { createTest, createTestUser } from "../helpers";
 
 describe("AI Messages", () => {
   it("save and list messages", async () => {

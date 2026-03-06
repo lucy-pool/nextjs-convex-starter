@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "../../../../../convex/_generated/api";
 import { DataGrid, type ColumnDef } from "@/components/ui/data-grid";
@@ -119,18 +119,17 @@ export default function AdminEmailsPage() {
   const { toast } = useToast();
   const [emailConfig, setEmailConfig] = useState<EmailConfig | null>(null);
 
-  const fetchConfig = useCallback(async () => {
-    try {
-      const config = await getEmailConfig();
-      setEmailConfig(config);
-    } catch {
-      // Silently fail — banner just won't show
-    }
-  }, [getEmailConfig]);
-
   useEffect(() => {
-    fetchConfig();
-  }, [fetchConfig]);
+    let cancelled = false;
+    getEmailConfig()
+      .then((config) => {
+        if (!cancelled) setEmailConfig(config);
+      })
+      .catch(() => {
+        // Silently fail — banner just won't show
+      });
+    return () => { cancelled = true; };
+  }, [getEmailConfig]);
 
   const handleResend = async (logId: Id<"emailLogs">) => {
     try {

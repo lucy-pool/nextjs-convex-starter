@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { api, internal } from "../../_generated/api";
-import { createTest, createTestUser, createAdminUser } from "../../__tests__/helpers";
+import { api, internal } from "../../../convex/_generated/api";
+import { createTest, createTestUser, createAdminUser } from "../helpers";
 
 const TEMPLATE_ARGS = {
   name: "test-template",

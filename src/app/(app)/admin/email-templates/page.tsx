@@ -306,9 +306,7 @@ function TemplateEditor({
   const [initialized, setInitialized] = useState(false);
   const [visualEditorLoaded, setVisualEditorLoaded] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const editorRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const EditorComponent = useRef<any>(null);
 
   // Lazy-load Maily editor only when visual mode is selected
@@ -692,7 +690,7 @@ function HtmlEditor({
           placeholder="<html>...</html>"
         />
         {showPreview && (
-          <div className="rounded-md border bg-white">
+          <div className="rounded-md border bg-background">
             <iframe
               srcDoc={value}
               className="w-full h-[400px] rounded-md"

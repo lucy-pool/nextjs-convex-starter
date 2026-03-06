@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
-import schema from "../schema";
+import schema from "../../convex/schema";
 import { modules } from "./setup";
-import type { Id } from "../_generated/dataModel";
+import type { Id } from "../../convex/_generated/dataModel";
 
 export { modules };
 

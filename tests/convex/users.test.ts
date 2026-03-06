@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { api } from "../_generated/api";
+import { api } from "../../convex/_generated/api";
 import { createTest, createTestUser, createAdminUser } from "./helpers";
 
 describe("Users service", () => {

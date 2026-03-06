@@ -185,14 +185,14 @@ When any agent runs `git commit`, three pre-commit hooks fire. These are PreTool
 
 ### Untested functions warning
 
-`check-untested-functions.sh` scans all exported Convex functions (`userQuery`, `userMutation`, `adminQuery`, `adminMutation`, `query`, `mutation`, `action`, `internalQuery`, `internalMutation`, `internalAction`) and checks if their names appear anywhere in `convex/**/__tests__/*.test.ts` files.
+`check-untested-functions.sh` scans all exported Convex functions (`userQuery`, `userMutation`, `adminQuery`, `adminMutation`, `query`, `mutation`, `action`, `internalQuery`, `internalMutation`, `internalAction`) and checks if their names appear anywhere in `tests/**/*.test.ts` files.
 
 **Non-blocking** — prints warnings like:
 ```
  Untested Convex functions:
   - myNewQuery
   - myNewMutation
-  Consider adding tests in convex/<service>/__tests__/
+  Consider adding tests in tests/convex/<service>/
 ```
 
 > [!TIP]
@@ -406,7 +406,7 @@ flowchart TD
 
 ### Test infrastructure
 
-Tests live in `convex/<service>/__tests__/` using **vitest + convex-test**. The test setup (`convex/__tests__/setup.ts`) uses `import.meta.glob` to load all Convex modules, and helpers (`convex/__tests__/helpers.ts`) provide:
+Tests live in `tests/convex/<service>/` using **vitest + convex-test**. The test setup (`tests/convex/setup.ts`) uses `import.meta.glob` to load all Convex modules, and helpers (`tests/convex/helpers.ts`) provide:
 
 | Helper | Purpose |
 |--------|---------|
@@ -440,7 +440,7 @@ expect(notes[0].title).toBe("My Note");
 The `check-untested-functions.sh` hook warns at commit time if you've added a new exported function without corresponding test coverage.
 
 > [!IMPORTANT]
-> **Agent Action:** When adding new Convex functions (queries, mutations, actions), always add tests in `convex/<service>/__tests__/`. Use `createTestUser` and `createAdminUser` from helpers — never mock auth manually. Test the outcome (what the function returns or how DB state changes), not internal implementation steps.
+> **Agent Action:** When adding new Convex functions (queries, mutations, actions), always add tests in `tests/convex/<service>/`. Use `createTestUser` and `createAdminUser` from helpers — never mock auth manually. Test the outcome (what the function returns or how DB state changes), not internal implementation steps.
 
 ---
 

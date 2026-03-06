@@ -40,9 +40,9 @@ export default function SignUpPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+          <h1 className="text-2xl font-bold text-card-foreground">{APP_NAME}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Create your account
           </p>
@@ -76,10 +76,10 @@ export default function SignUpPage() {
 
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t" />
+            <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
+            <span className="bg-card px-2 text-muted-foreground">
               Or continue with email
             </span>
           </div>
@@ -90,7 +90,7 @@ export default function SignUpPage() {
             <p className="text-sm text-destructive text-center">{error}</p>
           )}
           <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium text-foreground">
+            <label htmlFor="name" className="text-sm font-medium text-card-foreground">
               Name
             </label>
             <input
@@ -103,7 +103,7 @@ export default function SignUpPage() {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium text-foreground">
+            <label htmlFor="email" className="text-sm font-medium text-card-foreground">
               Email
             </label>
             <input
@@ -117,7 +117,7 @@ export default function SignUpPage() {
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-foreground">
+            <label htmlFor="password" className="text-sm font-medium text-card-foreground">
               Password
             </label>
             <input

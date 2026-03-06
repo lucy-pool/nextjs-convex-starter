@@ -1,6 +1,6 @@
 import { describe, it, expect, test } from "vitest";
-import { api } from "../../_generated/api";
-import { createTest, createTestUser } from "../../__tests__/helpers";
+import { api } from "../../../convex/_generated/api";
+import { createTest, createTestUser } from "../helpers";
 
 describe("Storage files", () => {
   it("store and list file metadata", async () => {

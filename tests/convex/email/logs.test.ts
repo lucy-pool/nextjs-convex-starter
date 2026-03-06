@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { api, internal } from "../../_generated/api";
-import { createTest, createTestUser, createAdminUser } from "../../__tests__/helpers";
-import type { Id } from "../../_generated/dataModel";
+import { api, internal } from "../../../convex/_generated/api";
+import { createTest, createTestUser, createAdminUser } from "../helpers";
+import type { Id } from "../../../convex/_generated/dataModel";
 
 /** Insert an email log directly, bypassing the scheduler. */
 async function insertEmailLog(

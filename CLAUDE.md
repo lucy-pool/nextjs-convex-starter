@@ -37,13 +37,6 @@ convex/                          # Backend
   convex.config.ts               # App definition — registers R2 component
   notes.ts                       # Demo CRUD (delete me)
 
-  __tests__/                     # Backend tests (vitest + convex-test)
-    setup.ts                     # Module glob for convex-test
-    helpers.ts                   # createTest, createTestUser, createAdminUser
-    auth.test.ts                 # Auth guard tests (userQuery/adminQuery rejection + acceptance)
-    notes.test.ts                # Notes CRUD + data boundary tests
-    users.test.ts                # Users service tests
-
   email/                         # Email service (deep module)
     send.ts                      # sendEmail, resendEmail (api.email.send.*)
     logs.ts                      # createEmailLog, updateEmailLog, checkIsAdmin, getEmailLogInternal, listEmailLogs
@@ -53,23 +46,15 @@ convex/                          # Backend
     provider.ts                  # "use node" utility — no function exports
     render.ts                    # "use node" utility — no function exports
     builtinTemplates.tsx         # "use node" utility — React Email templates
-    __tests__/                   # Email service tests
-      logs.test.ts               # Email log CRUD + admin access tests
-      templates.test.ts          # Template CRUD + uniqueness + deletion guard tests
-      send.test.ts               # Send flow + resend + auth tests
 
   storage/                       # Storage service (deep module)
     files.ts                     # storeFileMetadata, getMyFiles, deleteFile (api.storage.files.*)
     r2.ts                        # R2 client + clientApi (api.storage.r2.*)
     downloads.ts                 # "use node" — generateDownloadUrl (api.storage.downloads.*)
-    __tests__/                   # Storage tests
-      files.test.ts              # File metadata CRUD + ownership tests
 
   ai/                            # AI service (deep module)
     messages.ts                  # listMessages, saveMessage, clearHistory (api.ai.messages.*)
     chat.ts                      # "use node" — chat action (api.ai.chat.*)
-    __tests__/                   # AI tests
-      messages.test.ts           # Message CRUD + isolation + clear history tests
 
 src/
   proxy.ts                       # Convex Auth middleware — route protection
@@ -107,6 +92,22 @@ src/lib/
   block-*.sh                     # PreToolUse hooks: enforce CLI tool usage rules
   check-untested-functions.sh    # PreToolUse hook: warn about untested Convex functions on git commit
   check-temporal-coupling.sh     # PreToolUse hook: warn about cross-module temporal coupling on git commit
+
+tests/convex/                    # Backend tests (vitest + convex-test)
+  setup.ts                       # Module glob for convex-test
+  helpers.ts                     # createTest, createTestUser, createAdminUser
+  vite-env.d.ts                  # Type declarations for import.meta.glob
+  auth.test.ts                   # Auth guard tests (userQuery/adminQuery rejection + acceptance)
+  notes.test.ts                  # Notes CRUD + data boundary tests
+  users.test.ts                  # Users service tests
+  ai/
+    messages.test.ts             # Message CRUD + isolation + clear history tests
+  storage/
+    files.test.ts                # File metadata CRUD + ownership tests
+  email/
+    logs.test.ts                 # Email log CRUD + admin access tests
+    templates.test.ts            # Template CRUD + uniqueness + deletion guard tests
+    send.test.ts                 # Send flow + resend + auth tests
 
 memory/ai/diagrams/              # Auto-maintained architecture diagrams
   schema.md                      # ER diagram of all tables
@@ -205,7 +206,7 @@ Auth is enforced **automatically** via custom function builders from `convex/fun
 - [ ] Admin-only query/mutation? Use `adminQuery`/`adminMutation` from `./functions`
 - [ ] New action? Add `ctx.auth.getUserIdentity()` null check at top of handler
 - [ ] New role? Follow "Adding a Role" section below
-- [ ] Tests for new queries/mutations? Add to `convex/<service>/__tests__/`
+- [ ] Tests for new queries/mutations? Add to `tests/convex/<service>/`
 
 ## Adding a Feature
 
@@ -214,7 +215,7 @@ Auth is enforced **automatically** via custom function builders from `convex/fun
 3. If Node.js packages needed: create `convex/your-featureActions.ts` with `"use node"`
 4. Create `src/app/(app)/your-feature/page.tsx` (`"use client"` directive)
 5. Add nav entry in `src/components/layout/sidebar.tsx`
-6. Add tests in `convex/<service>/__tests__/` for new queries/mutations
+6. Add tests in `tests/convex/<service>/` for new queries/mutations
 7. Follow "Greybox at Planning Time" checklist above for new modules
 
 ## Adding a Role

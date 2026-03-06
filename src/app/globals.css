@@ -118,10 +118,10 @@
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 223 47% 11%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 223 47% 11%;
     --popover-foreground: 210 40% 98%;
 
     --primary: 210 40% 98%;
@@ -156,6 +156,37 @@
 
   *:focus-visible {
     @apply outline-hidden ring-2 ring-ring ring-offset-2;
+  }
+
+  /* Maily editor dark mode overrides */
+  .dark .mly-editor [class*="mly:bg-white"] {
+    background-color: hsl(var(--card)) !important;
+  }
+
+  .dark .mly-editor [class*="mly:border-gray-200"] {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  .dark .mly-editor [class*="mly:text-gray"] {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .mly-editor .tiptap {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  .dark .mly-editor [class*="mly:ring-offset-white"] {
+    --tw-ring-offset-color: hsl(var(--background)) !important;
+  }
+
+  .dark .mly-editor button:hover {
+    background-color: hsl(var(--accent)) !important;
+  }
+
+  .dark .mly-editor .ProseMirror:focus-visible,
+  .mly-editor .ProseMirror:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
   }
 
   @media (prefers-reduced-motion: reduce) {

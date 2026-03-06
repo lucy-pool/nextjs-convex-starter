@@ -154,8 +154,9 @@ convex/your-feature/
   featureActions.ts           # PUBLIC: exported actions ("use node")
   internal-helper.ts          # INTERNAL: not imported outside this folder
   provider.ts                 # INTERNAL: external service abstraction
-  __tests__/
-    feature.test.ts           # Tests assert outcomes, not internal steps
+
+tests/convex/your-feature/
+  feature.test.ts             # Tests assert outcomes, not internal steps
 ```
 
 **Checklist before adding:**

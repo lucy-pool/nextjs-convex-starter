@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { api, internal } from "../../_generated/api";
-import { createTest, createTestUser, createAdminUser } from "../../__tests__/helpers";
+import { api, internal } from "../../../convex/_generated/api";
+import { createTest, createTestUser, createAdminUser } from "../helpers";
 
 describe("email send flow", () => {
   // Use fake timers so ctx.scheduler.runAfter(0, ...) never fires the
