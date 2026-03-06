@@ -4,6 +4,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { useState } from "react";
 import Link from "next/link";
 import { APP_NAME } from "@/lib/utils";
+import { PasswordInput, isPasswordValid } from "@/components/auth/password-input";
 
 export default function ForgotPasswordPage() {
   const { signIn } = useAuthActions();
@@ -38,11 +39,6 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
     setLoading(true);
     try {
       await signIn("password", {
@@ -71,11 +67,13 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  const passwordsMatch = newPassword === confirmPassword || confirmPassword === "";
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm space-y-6 rounded-lg border border-border bg-card p-8 shadow-sm">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">{APP_NAME}</h1>
+          <h1 className="text-2xl font-bold text-card-foreground">{APP_NAME}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {step === "email"
               ? "Enter your email to reset your password"
@@ -92,7 +90,7 @@ export default function ForgotPasswordPage() {
             <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="text-sm font-medium text-foreground"
+                className="text-sm font-medium text-card-foreground"
               >
                 Email
               </label>
@@ -119,7 +117,7 @@ export default function ForgotPasswordPage() {
             <div className="space-y-2">
               <label
                 htmlFor="code"
-                className="text-sm font-medium text-foreground"
+                className="text-sm font-medium text-card-foreground"
               >
                 Reset Code
               </label>
@@ -139,42 +137,36 @@ export default function ForgotPasswordPage() {
             <div className="space-y-2">
               <label
                 htmlFor="newPassword"
-                className="text-sm font-medium text-foreground"
+                className="text-sm font-medium text-card-foreground"
               >
                 New Password
               </label>
-              <input
+              <PasswordInput
                 id="newPassword"
-                type="password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="••••••••"
+                onChange={setNewPassword}
+                showRequirements
               />
             </div>
             <div className="space-y-2">
               <label
                 htmlFor="confirmPassword"
-                className="text-sm font-medium text-foreground"
+                className="text-sm font-medium text-card-foreground"
               >
                 Confirm Password
               </label>
-              <input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={8}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="••••••••"
+                onChange={setConfirmPassword}
               />
+              {!passwordsMatch && (
+                <p className="text-xs text-destructive">Passwords do not match</p>
+              )}
             </div>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isPasswordValid(newPassword) || !passwordsMatch}
               className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
               {loading ? "Resetting..." : "Reset Password"}
