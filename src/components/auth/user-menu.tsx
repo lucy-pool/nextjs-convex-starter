@@ -1,12 +1,9 @@
-"use client";
-
-import { useAuthActions } from "@convex-dev/auth/react";
+import { authClient } from "@/lib/auth-client";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { LogOut, User } from "lucide-react";
 
 export function UserMenu() {
-  const { signOut } = useAuthActions();
   const user = useQuery(api.users.getCurrentUser);
 
   return (
@@ -24,7 +21,7 @@ export function UserMenu() {
         </span>
       </div>
       <button
-        onClick={() => void signOut().catch(() => {}).finally(() => { window.location.href = "/signin"; })}
+        onClick={() => void authClient.signOut().catch(() => {}).finally(() => { window.location.reload(); })}
         className="inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
         title="Sign out"
       >

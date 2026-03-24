@@ -1,7 +1,4 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import { LayoutDashboard, StickyNote, Upload, Bot, Table2, Mail, Users, FileText } from "lucide-react";
@@ -75,7 +72,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
     pathname === item.href || pathname.startsWith(item.href + "/");
   return (
     <Link
-      href={item.href}
+      to={item.href}
       className={cn(
         "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         isActive
@@ -93,7 +90,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 }
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const user = useQuery(api.users.getCurrentUser);
   const isAdmin = (user?.roles ?? []).includes("admin");
 
@@ -101,7 +98,7 @@ export function Sidebar() {
     <aside className="flex h-full w-64 flex-col bg-sidebar-bg text-sidebar-text border-r border-sidebar-border">
       {/* Logo / App Name */}
       <div className="flex h-16 items-center px-6 border-b border-sidebar-border">
-        <Link href="/dashboard" className="text-lg font-bold">
+        <Link to="/dashboard" className="text-lg font-bold">
           {APP_NAME}
         </Link>
       </div>
