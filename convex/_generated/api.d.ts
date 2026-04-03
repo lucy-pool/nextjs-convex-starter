@@ -12,6 +12,7 @@ import type * as ai_chat from "../ai/chat.js";
 import type * as ai_messages from "../ai/messages.js";
 import type * as auth from "../auth.js";
 import type * as authHelpers from "../authHelpers.js";
+import type * as crons from "../crons.js";
 import type * as email_actions from "../email/actions.js";
 import type * as email_builtinTemplates from "../email/builtinTemplates.js";
 import type * as email_logs from "../email/logs.js";
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   "ai/messages": typeof ai_messages;
   auth: typeof auth;
   authHelpers: typeof authHelpers;
+  crons: typeof crons;
   "email/actions": typeof email_actions;
   "email/builtinTemplates": typeof email_builtinTemplates;
   "email/logs": typeof email_logs;
