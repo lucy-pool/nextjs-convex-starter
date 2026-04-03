@@ -32,8 +32,8 @@ check_affected() {
     convex/email/*|convex/storage/*|convex/ai/*) echo "functions.md data-flow.md greybox.md" ;;
     convex/auth.ts|convex/auth.config.ts|convex/users.ts) echo "auth-flow.md" ;;
     convex/functions.ts|convex/authHelpers.ts) echo "greybox.md" ;;
-    src/proxy.ts|src/components/providers.tsx) echo "auth-flow.md" ;;
-    src/app/*/page.tsx|src/components/*.tsx) echo "data-flow.md" ;;
+    src/lib/auth-server.ts|src/lib/auth-client.ts|src/components/providers.tsx) echo "auth-flow.md" ;;
+    src/routes/_app/*.tsx|src/components/*.tsx) echo "data-flow.md" ;;
   esac
 }
 
@@ -45,7 +45,7 @@ check_arch_tree() {
   case "$file" in
     convex/[!_]*.ts|convex/[!_]*.tsx) NEEDS_ARCH_UPDATE=true ;;
     convex/*/[!_]*.ts|convex/*/[!_]*.tsx) NEEDS_ARCH_UPDATE=true ;;
-    src/app/*/page.tsx) NEEDS_ARCH_UPDATE=true ;;
+    src/routes/_app/*.tsx) NEEDS_ARCH_UPDATE=true ;;
     src/components/*.tsx) NEEDS_ARCH_UPDATE=true ;;
     src/lib/*.ts) NEEDS_ARCH_UPDATE=true ;;
     .claude/hooks/*) NEEDS_ARCH_UPDATE=true ;;
@@ -129,7 +129,7 @@ fi
 
 # Add CLAUDE.md architecture tree instructions if needed
 if [ "$ARCH_STALE" = true ]; then
-  PROMPT="$PROMPT ALSO update the ## Architecture file tree section in CLAUDE.md. Read the current CLAUDE.md, then scan the actual file structure (convex/, src/app/, src/components/, src/lib/, .claude/hooks/) and update the tree to match reality. Keep the same format — indented file tree with inline comments. Only update the tree block, do not change any other section."
+  PROMPT="$PROMPT ALSO update the ## Architecture file tree section in CLAUDE.md. Read the current CLAUDE.md, then scan the actual file structure (convex/, src/routes/, src/components/, src/lib/, .claude/hooks/) and update the tree to match reality. Keep the same format — indented file tree with inline comments. Only update the tree block, do not change any other section."
 fi
 
 PROMPT="$PROMPT Do NOT commit. Leave changes as unstaged files."

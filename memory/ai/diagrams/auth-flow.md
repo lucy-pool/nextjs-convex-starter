@@ -5,29 +5,26 @@
 ```mermaid
 sequenceDiagram
     participant B as Browser
-    participant CA as Convex Auth
-    participant M as Edge Proxy (proxy.ts)
-    participant A as (app)/layout.tsx
-    participant X as Convex
+    participant S as TanStack Start Server
+    participant BA as Better Auth (Convex HTTP)
+    participant X as Convex DB
 
-    B->>CA: User signs in at /signin (Password, GitHub, or Google)
-    CA->>CA: Validate credentials, create session
-    CA->>X: afterUserCreatedOrUpdated callback
-    alt New user
-        X->>X: Schedule welcome email (internal.emails.createEmailLog)
-    end
-    CA->>B: Session token, redirect to /dashboard
-    B->>M: Request /dashboard
-    M->>M: convexAuthNextjsMiddleware checks auth (proxy.ts)
-    M->>B: Route allowed (authenticated)
-    B->>A: Render (app)/layout.tsx
-    A->>X: useConvexAuth() — check isAuthenticated
+    B->>S: User signs in at /signin (Password, GitHub, or Google)
+    S->>BA: POST /api/auth/* (server function proxies to Convex)
+    BA->>BA: Validate credentials, create session
+    BA->>B: Set-Cookie (session token), redirect to /dashboard
+    B->>S: Request /dashboard
+    S->>S: beforeLoad: getAuth() server function
+    S->>BA: Check session token
+    BA->>S: Return token (or null)
+    S->>B: SSR root shell + client hydration
+    B->>X: useSession() — check auth client-side
     alt Not authenticated
-        A->>B: Redirect to /signin
+        B->>B: Redirect to /signin (_app.tsx gate)
     else Authenticated
-        A->>X: useQuery(getCurrentUser)
-        X->>A: User record
-        A->>B: Render AppShell + dashboard
+        B->>X: useQuery(getCurrentUser)
+        X->>B: User record
+        B->>B: Render AppShell + dashboard
     end
 ```
 
@@ -35,33 +32,34 @@ sequenceDiagram
 
 ```mermaid
 graph TD
-    request[Incoming Request] --> proxy["proxy.ts (convexAuthNextjsMiddleware)"]
-    proxy --> isPublic{Is public route?}
+    request[Incoming Request] --> root["__root.tsx (beforeLoad: getAuth)"]
+    root --> ssrToken{Got token from server?}
+    ssrToken -->|Yes| setAuth["Set token on ConvexQueryClient"]
+    ssrToken -->|No| noAuth["Continue without token"]
+    setAuth --> render
+    noAuth --> render
 
-    isPublic -->|"/ or /signin or /signup or /api/auth(.*)"| allow[Allow through]
-    isPublic -->|Any other route| protect[Check authentication]
+    render[Render Route] --> isProtected{Under /_app?}
+    isProtected -->|No| public["Public route — render directly"]
+    isProtected -->|Yes| appLayout["_app.tsx layout"]
 
-    protect --> hasSession{Has valid session?}
-    hasSession -->|Yes| appLayout["(app)/layout.tsx"]
-    hasSession -->|No| redirect[Redirect to /signin]
-
-    appLayout --> checkAuth["useConvexAuth()"]
-    checkAuth --> authenticated{isAuthenticated?}
-    authenticated -->|No| redirectAgain[Redirect to /signin]
+    appLayout --> checkSession["useSession()"]
+    checkSession --> authenticated{session exists?}
+    authenticated -->|No| redirect["window.location = /signin"]
     authenticated -->|Yes| queryUser["useQuery(getCurrentUser)"]
-    queryUser --> ready{user !== null?}
+    queryUser --> ready{user loaded?}
     ready -->|No| spinner[Show loading spinner]
-    ready -->|Yes| render[Render AppShell + children]
+    ready -->|Yes| renderApp[Render AppShell + children]
 ```
 
 ## JWT Flow
 
 ```mermaid
 graph LR
-    ConvexAuth["Convex Auth"] -->|"Issues self-signed JWT"| Browser
-    Browser -->|"JWT in session"| Convex
-    Convex -->|"auth.config.ts validates self-issued token"| Identity["ctx.auth.getUserIdentity()"]
-    Identity -->|"identity.subject = userId"| Lookup["users table"]
+    BetterAuth["Better Auth"] -->|"Issues JWT via session cookie"| Browser
+    Browser -->|"Cookie sent with requests"| ConvexHTTP["Convex HTTP (auth routes)"]
+    ConvexHTTP -->|"Validates session"| Identity["ctx.auth.getUserIdentity()"]
+    Identity -->|"identity.email"| Lookup["users table (by_email index)"]
 ```
 
 ## Backend Auth Layers
@@ -85,13 +83,15 @@ graph TD
 
 | File | Role |
 |------|------|
-| `convex/auth.config.ts` | Self-issued JWT config |
-| `convex/auth.ts` | Convex Auth providers (Password, GitHub, Google) + afterUserCreated callback |
+| `convex/auth.config.ts` | Better Auth JWT config via @convex-dev/better-auth |
+| `convex/auth.ts` | Better Auth providers (Email/Password, GitHub, Google) |
 | `convex/authHelpers.ts` | Auth guards (getCurrentUser, requireAuth, requireAdmin, hasRole) |
 | `convex/functions.ts` | Custom function builders (userQuery, userMutation, adminQuery, adminMutation) |
-| `convex/users.ts` | User CRUD (getCurrentUser soft-fail, updateProfile, admin operations) |
-| `src/proxy.ts` | Edge proxy — route protection (public vs protected) |
-| `src/components/providers.tsx` | ConvexAuthProvider wiring |
-| `src/app/(app)/layout.tsx` | Auth gate + user query on mount |
-| `src/app/signin/page.tsx` | Sign-in (Password + OAuth) |
-| `src/app/signup/page.tsx` | Sign-up (Password + OAuth) |
+| `convex/users.ts` | User CRUD (getCurrentUser, updateProfile, admin operations) |
+| `src/lib/auth-server.ts` | Server-side auth helpers (getToken, handler) |
+| `src/lib/auth-client.ts` | Client-side auth (useSession, signIn, signUp, signOut) |
+| `src/routes/__root.tsx` | SSR auth token fetch via beforeLoad |
+| `src/routes/_app.tsx` | Auth gate + user query on mount |
+| `src/routes/api/auth/$.ts` | Server function — proxies auth to Convex HTTP |
+| `src/routes/signin.tsx` | Sign-in (Email/Password + OAuth) |
+| `src/routes/signup.tsx` | Sign-up (Email/Password + OAuth) |

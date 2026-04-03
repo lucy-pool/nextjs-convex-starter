@@ -9,7 +9,7 @@ Reference: `docs/design/greybox_principle.md`
 ```mermaid
 graph TB
     subgraph "Consumer Layer (Frontend)"
-        Pages["src/app/(app)/*"]
+        Pages["src/routes/_app/*"]
     end
 
     subgraph "Shared Infrastructure"
@@ -26,7 +26,7 @@ graph TB
 
     subgraph "Deep Module: Storage"
         direction TB
-        StorageAPI["PUBLIC API<br/>───────────<br/>storeFileMetadata (userMutation)<br/>getMyFiles (userQuery)<br/>deleteFile (userMutation)<br/>r2.generateUploadUrl (clientApi)<br/>r2.syncMetadata (clientApi)<br/>generateDownloadUrl (action)"]
+        StorageAPI["PUBLIC API<br/>───────────<br/>createPendingFile (userMutation)<br/>confirmUpload (userMutation)<br/>getMyFiles (userQuery)<br/>deleteFile (userMutation)<br/>r2.generateUploadUrl (clientApi)<br/>r2.syncMetadata (clientApi)<br/>generateDownloadUrl (action)"]
         StorageInternal["INTERNALS<br/>───────────<br/>r2.ts: R2 client instance,<br/>  presigned URL generation<br/>downloads.ts: R2 GetObject signing"]
     end
 

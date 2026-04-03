@@ -126,8 +126,6 @@ function getConvexTsFiles(convexDir: string): { filePath: string; relPath: strin
 const CLIENT_ONLY_PACKAGES = [
   "react",
   "react-dom",
-  "next",
-  "@convex-dev/auth/react",
   "@radix-ui",
   "lucide-react",
   "class-variance-authority",
@@ -211,120 +209,11 @@ function checkClientImportsInConvex(cwd: string): string[] {
   return errors;
 }
 
-// ── Next.js MCP error check ─────────────────────────────────────────
+// ── MCP error check (no-op — Next.js MCP removed after TanStack Start migration) ─
 
-async function parseMcpResponse(res: Response): Promise<unknown> {
-  const ct = res.headers.get("content-type") || "";
-  if (ct.includes("text/event-stream")) {
-    const text = await res.text();
-    for (const line of text.split("\n")) {
-      if (line.startsWith("data: ")) {
-        try {
-          return JSON.parse(line.slice(6));
-        } catch {
-          /* skip */
-        }
-      }
-    }
-    return null;
-  }
-  return res.json();
-}
-
-async function checkNextJsMcpErrors(cwd: string): Promise<string | null> {
-  const MCP_URL = "http://localhost:3000/_next/mcp";
-  const jsonHeaders = {
-    "Content-Type": "application/json",
-    Accept: "application/json, text/event-stream",
-  };
-
-  try {
-    // 1. Initialize MCP session
-    const initRes = await fetch(MCP_URL, {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 1,
-        method: "initialize",
-        params: {
-          protocolVersion: "2025-03-26",
-          capabilities: {},
-          clientInfo: { name: "claude-stop-hook", version: "1.0.0" },
-        },
-      }),
-      signal: AbortSignal.timeout(5000),
-    });
-    if (!initRes.ok) return null;
-
-    const sessionId = initRes.headers.get("mcp-session-id");
-    await parseMcpResponse(initRes);
-
-    const sessionHeaders: Record<string, string> = { ...jsonHeaders };
-    if (sessionId) sessionHeaders["mcp-session-id"] = sessionId;
-
-    // 2. Send initialized notification
-    await fetch(MCP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(sessionId ? { "mcp-session-id": sessionId } : {}) },
-      body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
-      signal: AbortSignal.timeout(3000),
-    });
-
-    // 3. Call get_errors tool
-    const errRes = await fetch(MCP_URL, {
-      method: "POST",
-      headers: sessionHeaders,
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 2,
-        method: "tools/call",
-        params: { name: "get_errors", arguments: {} },
-      }),
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!errRes.ok) return null;
-
-    const data = (await parseMcpResponse(errRes)) as {
-      result?: { content?: { type: string; text: string }[] };
-    } | null;
-    const content = data?.result?.content;
-    if (!Array.isArray(content)) return null;
-
-    const text = content
-      .filter((c) => c.type === "text")
-      .map((c) => c.text)
-      .join("\n");
-
-    if (text.includes("No errors detected")) return null;
-    if (!text.includes("Found errors")) return null;
-
-    // Filter out generic network errors (e.g. Convex WebSocket drops) with no stack trace
-    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-    const isOnlyFetchError = lines.every(
-      (l) =>
-        !l.includes("(") ||
-        l.startsWith("#") ||
-        l.startsWith("**") ||
-        l.startsWith("---") ||
-        l.startsWith("```") ||
-        l.includes("Failed to fetch") ||
-        l.includes("TypeError")
-    );
-    if (isOnlyFetchError && text.includes("Failed to fetch")) return null;
-
-    // Filter out errors referencing source files that don't exist in this project
-    // (e.g. stale browser tabs from other projects on the same port)
-    const fileRefs = Array.from(text.matchAll(/\(((?:[^)]|\([^)]*\))+\.(tsx?|jsx?)):\d+:\d+\)/g));
-    if (fileRefs.length > 0) {
-      const hasRelevantError = fileRefs.some((m) => existsSync(join(cwd, m[1])));
-      if (!hasRelevantError) return null;
-    }
-    return text;
-  } catch {
-    // Server not running or MCP unavailable — skip gracefully
-    return null;
-  }
+async function checkNextJsMcpErrors(_cwd: string): Promise<string | null> {
+  // Next.js MCP endpoint no longer exists (migrated to TanStack Start)
+  return null;
 }
 
 // ── Diagram maintenance ─────────────────────────────────────────────
@@ -342,7 +231,7 @@ interface DiagramMapping {
 // These match structural changes (new files, new dirs) vs content-only edits.
 const ARCHITECTURE_TREE_PATTERNS: RegExp[] = [
   /^convex\/[^_].*\.tsx?$/,
-  /^src\/app\/.*\/page\.tsx$/,
+  /^src\/routes\/_app\/.*\.tsx$/,
   /^src\/components\/.*\.tsx$/,
   /^src\/lib\/.*\.ts$/,
   /^\.claude\/hooks\//,
@@ -365,10 +254,11 @@ const DIAGRAM_MAPPINGS: DiagramMapping[] = [
       /convex\/auth\.ts$/,
       /convex\/auth\.config\.ts$/,
       /convex\/users\.ts$/,
-      /src\/middleware\.ts$/,
+      /src\/lib\/auth-server\.ts$/,
+      /src\/lib\/auth-client\.ts$/,
       /src\/components\/providers\.tsx$/,
-      /src\/app\/sign-in\//,
-      /src\/app\/sign-up\//,
+      /src\/routes\/signin\.tsx$/,
+      /src\/routes\/signup\.tsx$/,
     ],
   },
   {
@@ -376,7 +266,7 @@ const DIAGRAM_MAPPINGS: DiagramMapping[] = [
     patterns: [
       /convex\/[^/]+\.tsx?$/,
       /convex\/(?:email|storage|ai)\/[^/]+\.tsx?$/,
-      /src\/app\/.*\/page\.tsx$/,
+      /src\/routes\/_app\/.*\.tsx$/,
       /src\/components\/[^/]+\.tsx$/,
     ],
   },
@@ -558,7 +448,7 @@ async function main() {
         `Also consider if the changes introduce something that should be in a NEW diagram not yet listed (e.g., a new integration, a new data pipeline, a new auth provider). If so, create it in ${DIAGRAM_DIR}/.`,
         `Use mermaid syntax inside markdown code blocks. Include tables for quick reference. Prioritize completeness for AI consumption — include every edge case and conditional path.`,
         updateArchTree
-          ? `ALSO update the ## Architecture file tree section in CLAUDE.md. Read the current CLAUDE.md, then scan the actual file structure (convex/, src/app/, src/components/, src/lib/, .claude/hooks/) and update the tree to match reality. Keep the same format — indented file tree with inline comments. Only update the tree block, do not change any other section.`
+          ? `ALSO update the ## Architecture file tree section in CLAUDE.md. Read the current CLAUDE.md, then scan the actual file structure (convex/, src/routes/, src/components/, src/lib/, .claude/hooks/) and update the tree to match reality. Keep the same format — indented file tree with inline comments. Only update the tree block, do not change any other section.`
           : "",
         `Do NOT commit. Leave all updates as unstaged changes in the working tree.`,
       ]
