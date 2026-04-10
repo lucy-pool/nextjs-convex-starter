@@ -1,6 +1,7 @@
-import { spawn } from "child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync, unlinkSync, statSync } from "fs";
+import { spawn, spawnSync } from "child_process";
+import { existsSync, readFileSync, readdirSync, writeFileSync, statSync } from "fs";
 import { join } from "path";
+import { scanDiagrams, matchChangedFiles, WATCHED_TREE_ROOTS } from "./diagram-watches";
 
 interface HookInput {
   session_id: string;
@@ -222,64 +223,6 @@ const DIAGRAM_DIR = "memory/ai/diagrams";
 const DIAGRAM_LOCK_FILE = "/tmp/lucystarter-diagram-update.lock";
 const DEBOUNCE_SECONDS = 30;
 
-interface DiagramMapping {
-  diagram: string;
-  patterns: RegExp[];
-}
-
-// Patterns that indicate the file tree in CLAUDE.md ## Architecture may need updating.
-// These match structural changes (new files, new dirs) vs content-only edits.
-const ARCHITECTURE_TREE_PATTERNS: RegExp[] = [
-  /^convex\/[^_].*\.tsx?$/,
-  /^src\/routes\/_app\/.*\.tsx$/,
-  /^src\/components\/.*\.tsx$/,
-  /^src\/lib\/.*\.ts$/,
-  /^\.claude\/hooks\//,
-];
-
-// Map source file patterns to the diagrams they affect.
-// When you add new diagrams, add a mapping here so they stay up to date.
-const DIAGRAM_MAPPINGS: DiagramMapping[] = [
-  {
-    diagram: "schema.md",
-    patterns: [/convex\/schema\.ts$/],
-  },
-  {
-    diagram: "functions.md",
-    patterns: [/convex\/(?!schema\.)[^/]+\.tsx?$/, /convex\/(?:email|storage|ai)\/[^/]+\.tsx?$/],
-  },
-  {
-    diagram: "auth-flow.md",
-    patterns: [
-      /convex\/auth\.ts$/,
-      /convex\/auth\.config\.ts$/,
-      /convex\/users\.ts$/,
-      /src\/lib\/auth-server\.ts$/,
-      /src\/lib\/auth-client\.ts$/,
-      /src\/components\/providers\.tsx$/,
-      /src\/routes\/signin\.tsx$/,
-      /src\/routes\/signup\.tsx$/,
-    ],
-  },
-  {
-    diagram: "data-flow.md",
-    patterns: [
-      /convex\/[^/]+\.tsx?$/,
-      /convex\/(?:email|storage|ai)\/[^/]+\.tsx?$/,
-      /src\/routes\/_app\/.*\.tsx$/,
-      /src\/components\/[^/]+\.tsx$/,
-    ],
-  },
-  {
-    diagram: "greybox.md",
-    patterns: [
-      /convex\/[a-z][a-z-]+\/[^/]+\.tsx?$/,
-      /convex\/functions\.ts$/,
-      /convex\/authHelpers\.ts$/,
-    ],
-  },
-];
-
 function isDiagramUpdateDebounced(): boolean {
   try {
     if (!existsSync(DIAGRAM_LOCK_FILE)) return false;
@@ -299,30 +242,61 @@ function touchLockFile(): void {
   }
 }
 
-function needsArchitectureTreeUpdate(changedFiles: string[], cwd: string): boolean {
-  for (const file of changedFiles) {
-    const rel = file.startsWith(cwd) ? file.slice(cwd.length + 1) : file;
-    for (const pattern of ARCHITECTURE_TREE_PATTERNS) {
-      if (pattern.test(rel)) return true;
+/**
+ * Detect whether the CLAUDE.md ## Architecture file tree likely needs an
+ * update by looking at `git status --porcelain` for *structural* changes —
+ * file adds, deletes, renames — inside watched tree roots. Pure content
+ * edits (`M` / `AM`) do NOT trigger a tree refresh.
+ */
+function hasStructuralTreeChanges(cwd: string): boolean {
+  let result;
+  try {
+    result = spawnSync("git", ["status", "--porcelain"], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 5000,
+    });
+  } catch {
+    return false;
+  }
+  if (result.status !== 0 || !result.stdout) return false;
+
+  const ignoredSuffixes = ["routeTree.gen.ts", "routeTree.gen.tsx"];
+  const ignoredFragments = ["_generated/"];
+
+  for (const line of result.stdout.split("\n")) {
+    if (!line || line.length < 4) continue;
+    // Porcelain v1: "XY <path>" (columns 0–1 = status, column 2 = space, then path).
+    const x = line[0];
+    const y = line[1];
+    let path = line.slice(3).trim();
+
+    // Rename form: "R  old -> new" — we care about the new path.
+    if (x === "R" || y === "R") {
+      const arrow = path.indexOf(" -> ");
+      if (arrow !== -1) path = path.slice(arrow + 4).trim();
+    }
+    // Strip surrounding quotes (git quotes paths with special chars).
+    if (path.startsWith('"') && path.endsWith('"')) {
+      path = path.slice(1, -1);
+    }
+
+    if (ignoredSuffixes.some((s) => path.endsWith(s))) continue;
+    if (ignoredFragments.some((f) => path.includes(f))) continue;
+
+    const inWatchedTree = WATCHED_TREE_ROOTS.some((root) => path.startsWith(root));
+    if (!inWatchedTree) continue;
+
+    const isUntracked = x === "?" && y === "?";
+    const isAdded = x === "A" || y === "A";
+    const isDeleted = x === "D" || y === "D";
+    const isRenamed = x === "R" || y === "R";
+
+    if (isUntracked || isAdded || isDeleted || isRenamed) {
+      return true;
     }
   }
   return false;
-}
-
-function getAffectedDiagrams(changedFiles: string[], cwd: string): string[] {
-  const affected = new Set<string>();
-  for (const file of changedFiles) {
-    const rel = file.startsWith(cwd) ? file.slice(cwd.length + 1) : file;
-    for (const mapping of DIAGRAM_MAPPINGS) {
-      for (const pattern of mapping.patterns) {
-        if (pattern.test(rel)) {
-          affected.add(mapping.diagram);
-          break;
-        }
-      }
-    }
-  }
-  return Array.from(affected);
 }
 
 // ── Main ────────────────────────────────────────────────────────────
@@ -405,70 +379,171 @@ async function main() {
     return;
   }
 
-  // --- All checks passed — update diagrams + architecture tree if needed ---
-  const affectedDiagrams = getAffectedDiagrams(changedFiles, input.cwd);
-  const updateArchTree = needsArchitectureTreeUpdate(changedFiles, input.cwd);
+  // --- All checks passed — content-derived diagram + structural tree updates ---
   const diagramDir = join(input.cwd, DIAGRAM_DIR);
-  const diagramsExist = existsSync(diagramDir);
-  const hasWork = (affectedDiagrams.length > 0 && diagramsExist) || updateArchTree;
+  const diagramsDirExists = existsSync(diagramDir);
 
-  if (hasWork) {
-    if (isDiagramUpdateDebounced()) {
-      const parts = [];
-      if (affectedDiagrams.length > 0) parts.push(`diagrams: ${affectedDiagrams.join(", ")}`);
-      if (updateArchTree) parts.push("CLAUDE.md architecture tree");
-      console.error(
-        `Updates needed: ${parts.join("; ")}. Skipped — another update ran within ${DEBOUNCE_SECONDS}s.`
-      );
-    } else {
-      const existingDiagrams = affectedDiagrams.filter((d) =>
-        existsSync(join(diagramDir, d))
-      );
-      const missingDiagrams = affectedDiagrams.filter(
-        (d) => !existsSync(join(diagramDir, d))
-      );
+  let affected = new Set<string>();
+  let unmatched: string[] = [];
+  let diagramCount = 0;
 
-      const parts = [];
-      if (affectedDiagrams.length > 0) parts.push(`diagrams: ${affectedDiagrams.join(", ")}`);
-      if (updateArchTree) parts.push("CLAUDE.md architecture tree");
-      console.error(
-        `Updates needed: ${parts.join("; ")}. Spawning updater...`
+  if (diagramsDirExists) {
+    const watchMap = scanDiagrams(diagramDir);
+    diagramCount = watchMap.diagramFiles.length;
+    if (diagramCount > 0) {
+      const relPaths = changedFiles.map((f) =>
+        f.startsWith(input.cwd) ? f.slice(input.cwd.length + 1) : f
       );
-
-      touchLockFile();
-
-      const diagramPrompt = [
-        `The following source files were changed: ${changedFiles.join(", ")}.`,
-        existingDiagrams.length > 0
-          ? `UPDATE these existing mermaid diagrams in ${DIAGRAM_DIR}/: ${existingDiagrams.join(", ")}. Read each diagram file first, then read the changed source files, and edit only the parts that need updating to reflect the current code.`
-          : "",
-        missingDiagrams.length > 0
-          ? `CREATE these missing diagrams in ${DIAGRAM_DIR}/: ${missingDiagrams.join(", ")}. Read the relevant source files and generate complete mermaid diagrams in markdown.`
-          : "",
-        `Also consider if the changes introduce something that should be in a NEW diagram not yet listed (e.g., a new integration, a new data pipeline, a new auth provider). If so, create it in ${DIAGRAM_DIR}/.`,
-        `Use mermaid syntax inside markdown code blocks. Include tables for quick reference. Prioritize completeness for AI consumption — include every edge case and conditional path.`,
-        updateArchTree
-          ? `ALSO update the ## Architecture file tree section in CLAUDE.md. Read the current CLAUDE.md, then scan the actual file structure (convex/, src/routes/, src/components/, src/lib/, .claude/hooks/) and update the tree to match reality. Keep the same format — indented file tree with inline comments. Only update the tree block, do not change any other section.`
-          : "",
-        `Do NOT commit. Leave all updates as unstaged changes in the working tree.`,
-      ]
-        .filter(Boolean)
-        .join(" ");
-
-      const child = spawn(
-        "claude",
-        ["-p", "--model", "sonnet", diagramPrompt],
-        {
-          cwd: input.cwd,
-          stdio: "ignore",
-          detached: true,
-        }
-      );
-      child.unref();
+      const result = matchChangedFiles(relPaths, watchMap);
+      affected = result.affected;
+      unmatched = result.unmatched;
     }
-  } else {
-    console.error("All checks passed.");
   }
+
+  const updateArchTree = hasStructuralTreeChanges(input.cwd);
+  const hasLayer1Work = affected.size > 0;
+  const hasLayer2Work = unmatched.length > 0 && diagramCount > 0;
+  const hasWork = hasLayer1Work || hasLayer2Work || updateArchTree;
+
+  if (!hasWork) {
+    console.error("All checks passed.");
+    return;
+  }
+
+  if (isDiagramUpdateDebounced()) {
+    const parts: string[] = [];
+    if (hasLayer1Work) parts.push(`update: ${[...affected].join(", ")}`);
+    if (hasLayer2Work) parts.push(`gap-fill: ${unmatched.length} unmatched file(s)`);
+    if (updateArchTree) parts.push("CLAUDE.md architecture tree");
+    console.error(
+      `Updates needed: ${parts.join("; ")}. Skipped — another update ran within ${DEBOUNCE_SECONDS}s.`
+    );
+    return;
+  }
+
+  const parts: string[] = [];
+  if (hasLayer1Work) parts.push(`update: ${[...affected].join(", ")}`);
+  if (hasLayer2Work) parts.push(`gap-fill: ${unmatched.length} unmatched file(s)`);
+  if (updateArchTree) parts.push("CLAUDE.md architecture tree");
+  console.error(`Updates needed: ${parts.join("; ")}. Spawning updater...`);
+
+  touchLockFile();
+
+  const prompt = buildUpdaterPrompt({
+    changedFiles,
+    affected: [...affected],
+    unmatched,
+    updateArchTree,
+    diagramDir: DIAGRAM_DIR,
+    diagramDirAbs: diagramDir,
+  });
+
+  const child = spawn("claude", ["-p", "--model", "sonnet", prompt], {
+    cwd: input.cwd,
+    stdio: "ignore",
+    detached: true,
+  });
+  child.unref();
+}
+
+// ── Updater prompt builder ──────────────────────────────────────────
+
+interface UpdaterPromptArgs {
+  changedFiles: string[];
+  affected: string[];
+  unmatched: string[];
+  updateArchTree: boolean;
+  diagramDir: string;
+  diagramDirAbs: string;
+}
+
+/**
+ * Build the sub-Claude prompt for the diagram/tree updater. Handles any
+ * combination of Layer 1 (update affected diagrams), Layer 2 (gap-fill for
+ * unmatched in-tree files), and the CLAUDE.md architecture-tree refresh.
+ */
+function buildUpdaterPrompt(args: UpdaterPromptArgs): string {
+  const {
+    changedFiles,
+    affected,
+    unmatched,
+    updateArchTree,
+    diagramDir,
+    diagramDirAbs,
+  } = args;
+
+  const segments: string[] = [];
+
+  segments.push(
+    `The following source files were changed in the last session: ${changedFiles.join(", ")}.`
+  );
+
+  if (affected.length > 0) {
+    segments.push(
+      `UPDATE these existing mermaid diagrams in ${diagramDir}/: ${affected.join(", ")}. ` +
+        `Read each diagram file first, then read the changed source files, and edit only the parts that need updating to reflect the current code. ` +
+        `Preserve existing file-path references inside the diagrams — they drive the watch system; do not delete them unless the referenced file was deleted.`
+    );
+  }
+
+  if (unmatched.length > 0) {
+    // Build a lightweight catalog of existing diagrams (name + first 20 lines)
+    // so sub-Claude can decide which existing diagram best covers the new files
+    // without having to open every file blindly.
+    const catalog = listDiagramHeaders(diagramDirAbs);
+    segments.push(
+      `GAP-FILL: these changed files live in a watched source tree but are NOT referenced by any existing diagram: ${unmatched.join(", ")}. ` +
+        `Decide one of: ` +
+        `(a) the most appropriate existing diagram in ${diagramDir}/ should cover these files — open it, update it, and embed the file paths inside the diagram body (tables, mermaid node labels, or prose) so future Stop hooks will watch them. ` +
+        `(b) a new diagram makes sense (e.g., a new integration, data pipeline, auth provider, or external service) — create it in ${diagramDir}/ with a descriptive filename and include the file paths. ` +
+        `(c) these files are genuinely not worth documenting (build config, scratch, one-off migration) — do nothing for those files specifically. ` +
+        `Here is the header of each existing diagram (first 20 lines) so you can pick the right one:\n\n${catalog}`
+    );
+  }
+
+  if (updateArchTree) {
+    segments.push(
+      `ALSO update the "## Architecture" file-tree code block in CLAUDE.md. ` +
+        `Structural changes were detected (files added, deleted, or renamed) in watched directories. ` +
+        `Read the current CLAUDE.md tree block, walk the actual file structure under convex/, src/routes/, src/components/, src/lib/, src/hooks/, .claude/hooks/, and update the tree to match reality. ` +
+        `Keep the same indented-tree format and inline comments. Only edit the "## Architecture" code block — do not touch any other section of CLAUDE.md.`
+    );
+  }
+
+  segments.push(
+    `Use mermaid syntax inside markdown code blocks. Include tables for quick reference. Prioritize completeness for AI consumption — include every edge case and conditional path.`
+  );
+  segments.push(
+    `Do NOT commit. Leave all updates as unstaged changes in the working tree.`
+  );
+
+  return segments.join(" ");
+}
+
+/**
+ * Read the first 20 lines of each diagram in the directory and return a
+ * compact listing used by the Layer 2 gap-fill prompt.
+ */
+function listDiagramHeaders(diagramDirAbs: string): string {
+  let entries;
+  try {
+    entries = readdirSync(diagramDirAbs, { withFileTypes: true });
+  } catch {
+    return "(no diagrams found)";
+  }
+
+  const chunks: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    try {
+      const text = readFileSync(join(diagramDirAbs, entry.name), "utf-8");
+      const head = text.split("\n").slice(0, 20).join("\n");
+      chunks.push(`── ${entry.name} ──\n${head}`);
+    } catch {
+      // Skip unreadable diagrams
+    }
+  }
+  return chunks.join("\n\n");
 }
 
 main().catch((e) => {
