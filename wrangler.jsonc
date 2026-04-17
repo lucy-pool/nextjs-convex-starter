@@ -4,7 +4,13 @@
   "compatibility_date": "2026-04-17",
   "compatibility_flags": ["nodejs_compat"],
   "main": "@tanstack/react-start/server-entry",
-  "observability": { "enabled": true },
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  },
   "upload_source_maps": true,
 
   // Acceptance environment — deploy with: wrangler deploy --env acc
