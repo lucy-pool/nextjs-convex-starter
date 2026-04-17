@@ -37,6 +37,7 @@ jobs:
           fi
 
       - name: Push Convex + build Worker
+        id: convex
         env:
           CONVEX_DEPLOY_KEY_PROD: ${{ secrets.CONVEX_DEPLOY_KEY_PROD }}
           CONVEX_DEPLOY_KEY_ACC:  ${{ secrets.CONVEX_DEPLOY_KEY_ACC }}
@@ -46,13 +47,26 @@ jobs:
           else
             export CONVEX_DEPLOY_KEY="$CONVEX_DEPLOY_KEY_ACC"
           fi
-          # `convex deploy` pushes functions, injects CONVEX_URL into the build env,
-          # then runs the build command so the Worker bundle embeds the URL.
-          bunx convex deploy --yes --cmd 'bun run build'
+          # Tell convex deploy to expose its URL as VITE_CONVEX_URL (so Vite's
+          # `import.meta.env.VITE_CONVEX_URL` gets baked into the client bundle
+          # at build time), and derive the matching site URL. Then echo both to
+          # step outputs so the next step can pass them as Worker runtime vars
+          # — the Worker's SSR code reads them via `process.env.VITE_*`.
+          bunx convex deploy --yes \
+            --cmd-url-env-var-name VITE_CONVEX_URL \
+            --cmd 'bash -c "
+              export VITE_CONVEX_SITE_URL=\"\${VITE_CONVEX_URL%.cloud}.site\" &&
+              echo \"convex_url=\$VITE_CONVEX_URL\" >> \"\$GITHUB_OUTPUT\" &&
+              echo \"convex_site_url=\$VITE_CONVEX_SITE_URL\" >> \"\$GITHUB_OUTPUT\" &&
+              bun run build
+            "'
 
       - name: Deploy Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
-          bunx wrangler deploy ${{ steps.target.outputs.env_flag }} --name "${{ steps.target.outputs.script }}"
+          bunx wrangler deploy ${{ steps.target.outputs.env_flag }} \
+            --name "${{ steps.target.outputs.script }}" \
+            --var "VITE_CONVEX_URL:${{ steps.convex.outputs.convex_url }}" \
+            --var "VITE_CONVEX_SITE_URL:${{ steps.convex.outputs.convex_site_url }}"
