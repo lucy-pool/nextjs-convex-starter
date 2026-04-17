@@ -2,6 +2,7 @@ import path from "path";
 import { defineConfig, loadEnv } from "vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import { devtools } from "@tanstack/devtools-vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
@@ -17,9 +18,8 @@ export default defineConfig(({ mode }) => {
       },
     },
     plugins: [
-      ...(mode === "production" && process.env.DEPLOY_TARGET !== "vps"
-        ? [cloudflare({ viteEnvironment: { name: "ssr" } })]
-        : []),
+      devtools(),
+      cloudflare({ viteEnvironment: { name: "ssr" } }),
       tanstackStart(),
       react(),
     ],
@@ -28,14 +28,6 @@ export default defineConfig(({ mode }) => {
         { find: "@/convex", replacement: path.resolve(__dirname, "./convex") },
         { find: "@/", replacement: path.resolve(__dirname, "./src") + "/" },
       ],
-    },
-    ssr: {
-      // Bundle ALL dependencies into the SSR build so dist/server/server.js
-      // is self-contained and the runtime container doesn't need a populated
-      // node_modules. Cloudflare Workers always required this; the VPS
-      // (Node) target now uses the same bundle so the Dockerfile runner
-      // stage only needs to copy dist/ + server-node.mjs.
-      noExternal: true,
     },
   };
 });
